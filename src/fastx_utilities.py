@@ -7,6 +7,7 @@ Copyright 2026
 
 from pathlib import Path
 import gzip
+import subprocess
 
 def fasta_to_dict (fasta: str) -> dict:
     """Open a fasta file (possibly compressed) and add each sequence to a dictionary.
@@ -73,3 +74,24 @@ def write_fasta_from_dict (fasta_dict: dict, fasta: str, gzip_output: bool = Fal
         except Exception as e:
             #message = f"write_fasta_from_dict() failed - {e}."
             raise
+
+def fastq_count_reads(file_path: Path | str, dry_run: bool = False) -> int:
+    """Count reads in a FASTQ file by dividing line count by 4."""
+    path = Path(file_path)
+    
+    if dry_run:
+        return 0
+    if not path.exists():
+        raise FileNotFoundError(f"Missing file: {path}")
+
+    is_gz = '.gz' in path.suffixes
+    cmd_base = "zcat" if is_gz else "cat"
+    
+    try:
+        cmd = f"{cmd_base} {path} | wc -l"
+        output = subprocess.check_output(cmd, shell=True, text=True)
+        line_count = int(output.strip())
+        return line_count // 4
+    
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Failed to count reads for {path}. Error: {e}")
