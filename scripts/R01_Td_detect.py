@@ -35,12 +35,6 @@ from src.tools import (
     SBFilterFastq
 )
 
-##############
-DRY_RUN = True
-##############
-THREADS = 1
-##############
-
 # Database paths
 DB_DIR = Path.home() / "bio_db"
 HG38   = DB_DIR      / "GRCh38.p14/srHG38.mmi" 
@@ -62,6 +56,11 @@ CONFIG      = PROJ_DIR    / "sample_config_R01.txt"
 TEST_CONFIG = PROJ_DIR    / "sample_config_R01 copy.txt"
 OUT_DIR     = PROJ_DIR    / "data"
 
+
+DRY_RUN = False
+THREADS = 16
+
+
 # Map each sample to human genome reference and get mapped mate ids
 def map_to_human(record: dict, db: Path, db_name: str, p: int) -> Tuple[Path, Path]:
     SAMPLE     = record["sample"]
@@ -79,7 +78,7 @@ def map_to_human(record: dict, db: Path, db_name: str, p: int) -> Tuple[Path, Pa
     run_check_call(
         formatted_command = step1.build(),
         devnull           = True,
-        dry_run           = True
+        dry_run           = DRY_RUN
     )
     # sort bam
     step2 = SamtoolsSort(
@@ -230,8 +229,8 @@ def get_coverage_stats(record: dict, db_fasta: Path, db_name: str) -> Tuple[Path
 
 def main():
     # Load config
-    #proj_config = ConfigManager(config_file=CONFIG)
-    proj_config = ConfigManager(config_file=TEST_CONFIG)
+    proj_config = ConfigManager(config_file=CONFIG)
+    #proj_config = ConfigManager(config_file=TEST_CONFIG)
     proj_config.add_column(name="read_count")
     proj_config.add_column(name="hg38_sorted_bam")
     proj_config.add_column(name="hg38_mapped_ids")

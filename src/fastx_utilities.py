@@ -85,7 +85,7 @@ def fastq_count_reads(file_path: Path | str, dry_run: bool = False) -> int:
         raise FileNotFoundError(f"Missing file: {path}")
 
     is_gz = '.gz' in path.suffixes
-    cmd_base = "zcat" if is_gz else "cat"
+    cmd_base = "gzip -dc" if is_gz else "cat"
     
     try:
         cmd = f"{cmd_base} {path} | wc -l"
