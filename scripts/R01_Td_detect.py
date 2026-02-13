@@ -121,14 +121,14 @@ def map_to_human(record: dict, db: Path, db_name: str, p: int) -> Tuple[Path, Pa
     
 def filter_fastq(record: dict, db1_name: str, db2_name: str) -> Tuple[Path, Path, Path]:
     SAMPLE = record["sample"]
-    mapped_ids = FILT_READS_DIR / f"{SAMPLE}_union_mapped_ids.txt"
+    mapped_ids = SEQID_DIR / f"{SAMPLE}_union_mapped_ids.txt"
     filtered_r1 = FILT_READS_DIR / f"{SAMPLE}_filtered_R1.fastq.gz"
     filtered_r2 = FILT_READS_DIR / f"{SAMPLE}_filtered_R2.fastq.gz"
     # get a list of all the paired reads that mapped to either reference human genome
     step1 = UniqueIdList(
         file_a     = FILT_READS_DIR / f"{SAMPLE}_{db1_name}.mapped_ids.txt",
         file_b     = FILT_READS_DIR / f"{SAMPLE}_{db2_name}.mapped_ids.txt",
-        output_txt = FILT_READS_DIR / f"{SAMPLE}_union_mapped_ids.txt",
+        output_txt = SEQID_DIR / f"{SAMPLE}_union_mapped_ids.txt",
         dry_run    = DRY_RUN
     )
     run_check_call(
@@ -140,7 +140,7 @@ def filter_fastq(record: dict, db1_name: str, db2_name: str) -> Tuple[Path, Path
     step2 = SBFilterFastq(
         r1_fastq      = READS_DIR / f"{record["r1_fastq"]}",
         r2_fastq      = READS_DIR / f"{record["r2_fastq"]}",
-        input_file    = FILT_READS_DIR / f"{SAMPLE}_union_mapped_ids.txt",
+        input_file    = SEQID_DIR / f"{SAMPLE}_union_mapped_ids.txt",
         output_prefix = FILT_READS_DIR / f"{SAMPLE}_filtered",
         gz            = True,
         dry_run       = DRY_RUN
