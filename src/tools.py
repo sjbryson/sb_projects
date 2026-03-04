@@ -79,6 +79,15 @@ class Minimap2MapSRtoBam(BioTool):
     cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools view -bS - > {output_bam}"
 
 @dataclass(kw_only=True)
+class Minimap2MapSRtoSortedBam(BioTool):
+    input_mmi:  Path | str = field(metadata={'type': 'input_file'})
+    r1:         Path | str = field(metadata={'type': 'input_file'})
+    r2:         Path | str = field(metadata={'type': 'input_file'})
+    output_bam: Path | str = field(metadata={'type': 'output_file'})
+    threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools sort -bS - > {output_bam}"
+
+@dataclass(kw_only=True)
 class Minimap2SRHumanDepletion(BioTool):
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     r1:         Path | str = field(metadata={'type': 'input_file'})
@@ -203,5 +212,6 @@ class SBFilterFastq(BioTool):
     input_file:     Path | str = field(metadata={'type': 'input_file'})
     output_prefix:  str
     gz:             bool = field(default=False, metadata={'type': 'flag', 'option': '--gz'})
-    invert:         bool = field(default=False, metadata={'type': 'flag', 'option': '--invert'})
+    keep:           bool = field(default=False, metadata={'type': 'flag', 'option': '--keep'})
+    exclude:        bool = field(default=True, metadata={'type': 'flag', 'option': '--exclude'})
     cmd:            str = "sb_filter_fastq {gz} {invert} --r1 {r1_fastq} --r2 {r2_fastq} --filter {input_file} --out-prefix {output_prefix}"

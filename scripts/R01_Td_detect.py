@@ -57,7 +57,7 @@ TEST_CONFIG = PROJ_DIR    / "sample_config_R01 copy.txt"
 OUT_DIR     = PROJ_DIR    / "data"
 
 
-DRY_RUN = False
+DRY_RUN = True
 THREADS = 16
 
 
@@ -126,8 +126,8 @@ def filter_fastq(record: dict, db1_name: str, db2_name: str) -> Tuple[Path, Path
     filtered_r2 = FILT_READS_DIR / f"{SAMPLE}_filtered_R2.fastq.gz"
     # get a list of all the paired reads that mapped to either reference human genome
     step1 = UniqueIdList(
-        file_a     = FILT_READS_DIR / f"{SAMPLE}_{db1_name}.mapped_ids.txt",
-        file_b     = FILT_READS_DIR / f"{SAMPLE}_{db2_name}.mapped_ids.txt",
+        file_a     = SEQID_DIR / f"{SAMPLE}_{db1_name}.mapped_ids.txt",
+        file_b     = SEQID_DIR / f"{SAMPLE}_{db2_name}.mapped_ids.txt",
         output_txt = SEQID_DIR / f"{SAMPLE}_union_mapped_ids.txt",
         dry_run    = DRY_RUN
     )
