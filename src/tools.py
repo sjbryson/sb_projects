@@ -85,7 +85,7 @@ class Minimap2MapSRtoSortedBam(BioTool):
     r2:         Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools sort -bS - > {output_bam}"
+    cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools sort -o - > {output_bam}"
 
 @dataclass(kw_only=True)
 class Minimap2SRHumanDepletion(BioTool):

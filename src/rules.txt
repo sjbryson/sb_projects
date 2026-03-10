@@ -1,5 +1,4 @@
-
-from snakemake.utils import multiext
+#from snakemake.utils import multiext
 
 ## -- Minimap2 Rules -- ##
 
@@ -45,7 +44,7 @@ rule Minimap2MapSRtoSortedBam:
     threads: 8
     shell:
         "minimap2 -ax sr -t {threads} {input.mmi} {input.r1} {input.r2} | "
-        "samtools sort -bS - > {output.bam}"
+        "samtools sort -o - > {output.bam}"
 
 rule Minimap2SRHumanDepletion:
     input:

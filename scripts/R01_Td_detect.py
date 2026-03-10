@@ -2,10 +2,11 @@
 
 """
 Samuel Joseph Bryson
+Copyright 2026
 
 - 1 - Run human depletion using 2 refs (hg38 and chm13) on a set of samples (r1.fq.gz & r2.fq.gz).
 - 2 - All mapped pairs to either are removed; this yields filtered_r1.fq.gz and filtered.r2.fq.gz.
-- 3 - Filtered reads are mapped to a set of reference bacterial genomes of interest + one for FDR.
+- 3 - Filtered reads are mapped to a set of 4 reference bacterial genomes of interest + 4 controls for FDR.
         - Treponema_denticola           (GCF_000008185.1_ASM818v1)          NC_002967.9
         - Tannerella_forsythia          (GCF_000238215.1_ASM23821v1)        NC_016610.1
         - Porphyromonas_gingivalis      (GCF_000010505.1_ASM1050v1)         NC_010729.1
@@ -231,21 +232,25 @@ def main():
     # Load config
     proj_config = ConfigManager(config_file=CONFIG)
     #proj_config = ConfigManager(config_file=TEST_CONFIG)
-    proj_config.add_column(name="read_count")
-    proj_config.add_column(name="hg38_sorted_bam")
-    proj_config.add_column(name="hg38_mapped_ids")
-    proj_config.add_column(name="hg38_mapped_count")
-    proj_config.add_column(name="hg13_sorted_bam")
-    proj_config.add_column(name="hg13_mapped_ids")
-    proj_config.add_column(name="hg13_mapped_count")
-    proj_config.add_column(name="union_mapped_ids")
-    proj_config.add_column(name="union_mapped_count")
-    proj_config.add_column(name="filtered_r1")
-    proj_config.add_column(name="filtered_r2")
-    proj_config.add_column(name="filtered_read_count")
-    proj_config.add_column(name="bacdb_sorted_bam")
-    proj_config.add_column(name="idxstats_tsv")
-    proj_config.add_column(name="pileup_txt")
+    workflow_outputs = [
+        "read_count",
+        "hg38_sorted_bam",
+        "hg38_mapped_ids",
+        "hg38_mapped_count",
+        "hg13_sorted_bam",
+        "hg13_mapped_ids",
+        "hg13_mapped_count",
+        "union_mapped_ids",
+        "union_mapped_count",
+        "filtered_r1",
+        "filtered_r2",
+        "filtered_read_count",
+        "bacdb_sorted_bam",
+        "idxstats_tsv",
+        "pileup_txt"
+    ]
+    for output in workflow_outputs:
+        proj_config.add_column(name=output)
 
     for index, row in proj_config:
         if DRY_RUN == True: 

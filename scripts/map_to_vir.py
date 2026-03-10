@@ -2,6 +2,7 @@
 
 """
 Samuel Joseph Bryson
+Copyright 2026
 
 - 1 - Run virus detection using minimap2 to align human depleted (used hg38 and chm13) 
     - reads against a set of virus databases: {virus_db}.mmi.
@@ -15,7 +16,6 @@ from typing import Tuple
 from src.config_manager import ConfigManager
 from src.subprocess_utilities import run_check_call
 from src.file_utilities import count_lines
-from src.fastx_utilities import fastq_count_reads
 from src.tools import (
     Minimap2MapSRtoSortedBam,
     SamtoolsIndex,
@@ -49,8 +49,8 @@ CONFIG         = VIR_DIR     / "vir_cfg.txt"
 TEST_CONFIG    = VIR_DIR     / "test_vir_cfg.txt"
 
 # global vars
-DRY_RUN = True
-THREADS = 16
+DRY_RUN = False
+THREADS = 20
 
 # Map each sample to a viral genome reference database
 def map_to_virus(
