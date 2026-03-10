@@ -29,7 +29,7 @@ from src.ictv_graph.relationships import (
 
 class ICTVtaxon(StructuredNode):
     # properties
-    #  taxnode_id = StringProperty(unique_index=True)
+    ##  taxnode_id = StringProperty(unique_index=True)
     name   = StringProperty(required=True)
     rank   = StringProperty(required=True)
     # relationships
