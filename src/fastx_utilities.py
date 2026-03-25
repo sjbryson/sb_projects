@@ -18,6 +18,9 @@ def fasta_to_dict (fasta: str) -> dict:
         input_fasta: (str) path to fasta file
     Returns:
         fasta_dict: dict[str:str] sequence_id to sequence dictionary
+    Raises:
+        FileNotFoundError
+        BadGzipFile
     """
     try:
         fasta = Path(fasta).resolve()
@@ -27,7 +30,7 @@ def fasta_to_dict (fasta: str) -> dict:
         else:
             open_func = open
             mode = 'r'
-        fasta_dict = dict()
+        fasta_dict = {}
         with open_func(fasta, mode) as f:
             seq_id = None
             for line in f:

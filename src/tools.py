@@ -70,15 +70,6 @@ class PreIndexMinimap2LR(BioTool):
     cmd:         str = "minimap2 -H {threads} -d {output_mmi} {input_fasta}"
 
 @dataclass(kw_only=True)
-class Minimap2MapSRtoBam(BioTool):
-    input_mmi:  Path | str = field(metadata={'type': 'input_file'})
-    r1:         Path | str = field(metadata={'type': 'input_file'})
-    r2:         Path | str = field(metadata={'type': 'input_file'})
-    output_bam: Path | str = field(metadata={'type': 'output_file'})
-    threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools view -bS - > {output_bam}"
-
-@dataclass(kw_only=True)
 class Minimap2MapSRtoSortedBam(BioTool):
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     r1:         Path | str = field(metadata={'type': 'input_file'})
@@ -94,7 +85,7 @@ class Minimap2SRHumanDepletion(BioTool):
     r2:         Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cmd:        str = "minimap2 -ax sr --secondary=no {threads} {input_mmi} {r1} {r2} | samtools view -bS - > {output_bam}"
+    cmd:        str = "minimap2 -ax sr --secondary=no {threads} {input_mmi} {r1} {r2} | samtools sort -o - > {output_bam}"
 
 @dataclass(kw_only=True)
 class Minimap2MapLR5(BioTool):
@@ -102,7 +93,7 @@ class Minimap2MapLR5(BioTool):
     reads:      Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cmd:        str = "minimap2 -ax asm5 {threads} {input_mmi} {reads} | samtools view -bS - > {output_bam}"
+    cmd:        str = "minimap2 -ax asm5 {threads} {input_mmi} {reads} | samtools sort -o {output_bam}"
 
 @dataclass(kw_only=True)
 class Minimap2MapLR20(BioTool):
@@ -110,7 +101,7 @@ class Minimap2MapLR20(BioTool):
     reads:      Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cmd:        str = "minimap2 -ax asm20 {threads} {input_mmi} {reads} | samtools view -bS - > {output_bam}"
+    cmd:        str = "minimap2 -ax asm20 {threads} {input_mmi} {reads} | samtools sort -o {output_bam}"
 
 ## -- host read depletion -- ##
 @dataclass(kw_only=True)
@@ -131,15 +122,15 @@ class MinimapFilterPairedFastq(BioTool):
 ## -- virus mapping --##
 @dataclass(kw_only=True)
 class MinimapAlignToSortedBam(BioTool):
-    """Standard virus detection: write to sorted bam."""
+    """Standard virus detection: write to position sorted bam."""
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     r1:         Path | str = field(metadata={'type': 'input_file'})
     r2:         Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:        str = "minimap2 -ax sr -N 5 {threads} {input_mmi} {r1} {r2} | \
-                       samtools view -h -u -q 5 | \
                        samtools sort -o {output_bam} -"
+
 ## -- deduplicate bam --##
 @dataclass(kw_only=True)
 class DeDuplicateToSortedBam(BioTool):
@@ -231,17 +222,17 @@ class Blastn(BioTool):
 ##########################
 @dataclass(kw_only=True)
 class GetContigPerBaseCoverageFromPileup(BioTool):
-    contig_id: str
+    contig_id:    str
     pileup_file:  Path | str = field(metadata={'type': 'input_file'})
     output_tsv:   Path | str = field(metadata={'type': 'output_file'})
     cmd:          str = "awk '$1 == \"{reference_id}\" {{print $2 \"\\t\" $4}}' {pileup_file} > {output_tsv}"
 
 @dataclass(kw_only=True)
 class UniqueIdList(BioTool):
-    file_a: Path = field(metadata={'type': 'input_file'})
-    file_b: Path = field(metadata={'type': 'input_file'})
+    file_a:     Path = field(metadata={'type': 'input_file'})
+    file_b:     Path = field(metadata={'type': 'input_file'})
     output_txt: Path = field(metadata={'type': 'output_file'})
-    cmd: str = "cat {file_a} {file_b} | sort -u > {output_txt}"
+    cmd:        str  = "cat {file_a} {file_b} | sort -u > {output_txt}"
 
 @dataclass(kw_only=True)
 class GzipKeepFile(BioTool):

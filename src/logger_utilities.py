@@ -70,12 +70,10 @@ def log_session(name: str, log_file: str | Path, level: int = logging.INFO, debu
     """
     Context manager to safely create, use, and shutdown a logger.
     """
-    # Reuse your existing setup_logger function
     logger = setup_logger(name=name, log_file=log_file, level=level, debug=debug)
     try:
         yield logger
     finally:
-        # This runs even if an exception occurs in the 'with' block
         shutdown_logger(logger)
 
 

@@ -233,9 +233,7 @@ def main():
     try:
         config = get_config()
         config.database_url = f"bolt://{args.user}:{args.pwd}@{args.uri}"
-        
-        # default = 'bolt://neo4j:virus_db@localhost:7687'  
-        input = Path(args.ictv_file)  # use "/Users/sb/bio_db/ICTV/MSL40.v2.20260223.txt"
+        input = Path(args.ictv_file)  
         builder = ICTVBuilder(input)
         builder.build_ictv_graph()
 
@@ -246,18 +244,7 @@ def main():
         # Closes the entire driver/pool for the script
         db.close_connection()
         print(f"Connection Pool Closed.")
-    
-
-
-
 
 if __name__ == "__main__":
     main()
-    #input = Path("/Users/sb/bio_db/ICTV/MSL40.v2.20260223.txt")
-    #builder = ICTVBuilder(input)
-    #results = builder._parse_genbank_accs(
-    #    record = "Seg1: OP436269; Seg2: OP436270",
-    #    #record = "BX897699 (1602076.1680868)", 
-    #    acc_type = "genbank",
-    #)
-    #print(results)
+    

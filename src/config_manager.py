@@ -12,6 +12,7 @@ from typing import List, Optional, Dict, Any, Iterator
 
 @dataclass
 class ConfigManager:
+    """A lightweight wrapper for using a Pandas df for workflow data."""
     config_file: Path | str
     delimiter: str = '\t'
     config_df: pd.DataFrame = field(init=False, repr=False)
