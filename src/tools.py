@@ -12,6 +12,7 @@ from typing import Optional
 @dataclass(kw_only=True)
 class BioTool():
     dry_run: InitVar[bool] = False
+    cmd:     str = field(default="", init=False, repr=False)
 
     def __post_init__(self, dry_run: bool):
         for f in fields(self):
@@ -49,8 +50,7 @@ class BioTool():
 
     def build(self) -> str:
         """Format self.cmd string with attribute values."""
-        cmd = self.cmd.format(**asdict(self))
-        return " ".join(cmd.split())
+        return " ".join(self.cmd.format(**asdict(self)).split())
 
 ####################
 ## -- Minimap2 -- ##
@@ -111,6 +111,47 @@ class Minimap2MapLR20(BioTool):
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:        str = "minimap2 -ax asm20 {threads} {input_mmi} {reads} | samtools view -bS - > {output_bam}"
+
+## -- host read depletion -- ##
+@dataclass(kw_only=True)
+class MinimapFilterPairedFastq(BioTool):
+    """Standard Host Depletion: write unmapped pairs to paired fastq."""
+    input_mmi:   Path | str = field(metadata={'type': 'input_file'})
+    r1:          Path | str = field(metadata={'type': 'input_file'})
+    r2:          Path | str = field(metadata={'type': 'input_file'})
+    filtered_r1: Path | str = field(metadata={'type': 'output_file'})
+    filtered_r2: Path | str = field(metadata={'type': 'output_file'})
+    mapq:        Optional[int] = field(default=5)
+    threads:     Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cmd:         str = "minimap2 -ax sr --secondary=no {threads} {input_mmi} {r1} {r2} | \
+                        samtools sort -n - | \
+                        filter_bam_to_paired_fastq {threads} --r1 {filtered_r1} --r2 {filtered_r2} --max-mapq {mapq}"
+    
+
+## -- virus mapping --##
+@dataclass(kw_only=True)
+class MinimapAlignToSortedBam(BioTool):
+    """Standard virus detection: write to sorted bam."""
+    input_mmi:  Path | str = field(metadata={'type': 'input_file'})
+    r1:         Path | str = field(metadata={'type': 'input_file'})
+    r2:         Path | str = field(metadata={'type': 'input_file'})
+    output_bam: Path | str = field(metadata={'type': 'output_file'})
+    threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cmd:        str = "minimap2 -ax sr -N 5 {threads} {input_mmi} {r1} {r2} | \
+                       samtools view -h -u -q 5 | \
+                       samtools sort -o {output_bam} -"
+## -- deduplicate bam --##
+@dataclass(kw_only=True)
+class DeDuplicateToSortedBam(BioTool):
+    """Standard virus detection: mark and remove PCR duplicates."""
+    input_bam:  Path | str = field(metadata={'type': 'input_file'})
+    output_bam: Path | str = field(metadata={'type': 'output_file'})
+    threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-@ {value}'})
+    cmd:        str = "samtools sort -n {threads} {input_bam} | \
+                       samtools fixmate -m - - | \
+                       samtools sort {threads} - | \
+                       samtools markdup -r - {output_bam}"
+
 
 ####################
 ## -- Samtools -- ##
@@ -201,6 +242,23 @@ class UniqueIdList(BioTool):
     file_b: Path = field(metadata={'type': 'input_file'})
     output_txt: Path = field(metadata={'type': 'output_file'})
     cmd: str = "cat {file_a} {file_b} | sort -u > {output_txt}"
+
+@dataclass(kw_only=True)
+class GzipKeepFile(BioTool):
+    """Compress a file using gzip, output to a new path."""
+    input_file:  Path | str = field(metadata={'type': 'input_file'})
+    output_file: Path | str = field(metadata={'type': 'output_file'})
+    level:       Optional[int] = field(default=6, metadata={'type': 'value_flag', 'flag_fmt': '-{value}'})
+    force:       bool = field(default=False, metadata={'type': 'flag', 'option': '-f'})
+    cmd:         str = "gzip -c {level} {force} {input_file} > {output_file}"
+
+@dataclass(kw_only=True)
+class GzipReplaceFile(BioTool):
+    """Compress a file in-place using gzip - original is deleted."""
+    input_file:  Path | str = field(metadata={'type': 'input_file'})
+    level:       Optional[int] = field(default=6, metadata={'type': 'value_flag', 'flag_fmt': '-{value}'})
+    force:       bool = field(default=False, metadata={'type': 'flag', 'option': '-f'})
+    cmd:         str = "gzip -c {level} {force} {input_file} > {output_file}"
 
 ####################
 ## -- SB_Tools -- ##

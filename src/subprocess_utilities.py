@@ -39,7 +39,7 @@ def run_check_call(
             logger.info(msg)
         else:
             print(msg)
-        return
+        return 
 
     elif devnull:
         subprocess.check_call(
@@ -75,10 +75,18 @@ def run_check_call_devnull (formatted_command: str) -> None:
         stderr=subprocess.STDOUT
     )
 
-def run_check_output_to_str(formatted_command: str) -> str:    
+def run_check_output_to_str(
+        formatted_command: str,
+        dry_run = False,
+    ) -> str:    
     """Returns stdout as string. Good for getting a single ID or path."""
-    # check_output returns bytes; using text=True handles decoding automatically
-    return subprocess.check_output(formatted_command, shell=True, text=True).strip()
+    if dry_run:
+        msg = f"[DRY RUN]: {formatted_command}"
+        print(msg)
+        return "DRY RUN"
+    else:
+        # check_output returns bytes; using text=True handles decoding automatically
+        return subprocess.check_output(formatted_command, shell=True, text=True).strip()
 
 
 def run_and_log(formatted_command: str, logger: logging.Logger):

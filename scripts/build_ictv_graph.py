@@ -168,14 +168,17 @@ class ICTVBuilder:
             stop = None
             if ':' in part:
                 label, acc = part.split(':', 1)
+                label = label.strip()
+                acc = acc.strip()
+            else:
+                acc = part.strip()
             if '(' in part:
                 label = "Provirus"
                 acc, coords = part.split(' ', 1)
                 coords = coords.replace('(', '').replace(')', '').split('.')
                 start = coords[0]
                 stop = coords[1]               
-            else:
-                acc = part.strip()
+            
             if start != None:
                 results.append({
                     'accession_id': acc,
@@ -250,6 +253,11 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
+    #input = Path("/Users/sb/bio_db/ICTV/MSL40.v2.20260223.txt")
+    #builder = ICTVBuilder(input)
+    #results = builder._parse_genbank_accs(
+    #    record = "Seg1: OP436269; Seg2: OP436270",
+    #    #record = "BX897699 (1602076.1680868)", 
+    #    acc_type = "genbank",
+    #)
+    #print(results)

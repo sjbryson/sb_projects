@@ -89,9 +89,9 @@ def fastq_count_reads(file_path: Path | str, dry_run: bool = False) -> int:
     
     try:
         cmd = f"{cmd_base} {path} | wc -l"
-        output = subprocess.check_output(cmd, shell=True, text=True)
-        line_count = int(output.strip())
-        return line_count // 4
+        line_count = subprocess.check_output(cmd, shell=True, text=True)
+        read_count = int(line_count.strip()) / 4
+        return read_count
     
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Failed to count reads for {path}. Error: {e}")
