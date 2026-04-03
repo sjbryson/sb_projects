@@ -24,7 +24,7 @@ class Wrapper():
 
             # --- Value Flags (e.g., threads, quality scores) --- #
             if metadata_type == 'value_flag':
-                flag_fmt = f.metadata.get('flag_fmt') # (e.g., "-t {value}")
+                flag_fmt = f.metadata.get('flag_fmt') # (e.g., "-t {value}"| allows piped cmds with dif. thread flags, e.g. t, w, @)
                 if value is not None and value is not False:
                     setattr(self, f.name, flag_fmt.format(value=value))
                 else:
@@ -273,7 +273,7 @@ class GzipReplaceFile(Wrapper):
     input_file:  Path | str = field(metadata={'type': 'input_file'})
     level:       Optional[int] = field(default=6, metadata={'type': 'value_flag', 'flag_fmt': '-{value}'})
     force:       bool = field(default=False, metadata={'type': 'flag', 'option': '-f'})
-    cmd:         str = "gzip -c {level} {force} {input_file} > {output_file}"
+    cmd:         str = "gzip {level} {force} {input_file}"
 
 ###################
 ## -- SB_Bits -- ##
