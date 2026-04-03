@@ -24,7 +24,7 @@ from src.config_manager import ConfigManager
 from src.subprocess_utilities import run_check_call
 from src.fastx_utilities import fastq_count_reads
 from src.file_utilities import delete_file, count_lines
-from src.tools import (
+from wrappers import (
     Minimap2SRHumanDepletion,
     Minimap2MapSRtoBam,
     SamtoolsSort,

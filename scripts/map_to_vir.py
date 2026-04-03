@@ -16,7 +16,7 @@ from typing import Tuple
 from src.config_manager import ConfigManager
 from src.subprocess_utilities import run_check_call
 from src.file_utilities import count_lines
-from src.tools import (
+from wrappers import (
     Minimap2MapSRtoSortedBam,
     SamtoolsIndex,
     GetProperMappedIDs,

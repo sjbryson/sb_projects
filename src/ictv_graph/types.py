@@ -45,7 +45,7 @@ class TaxonRank(Enum):
 
 class VirusType(Enum):
     ICTV_ISOLATE = "ictv_isolate"
-    ASSEMBLY = "assembly"
+    ASSEMBLY     = "assembly"
 
 class IsolateType(Enum):
     ACCESSORY = "A"

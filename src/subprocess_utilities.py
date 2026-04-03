@@ -23,15 +23,13 @@ def run_subprocess(formatted_command: str) -> Tuple[int, str, str]:
 
 def run_check_call(
         formatted_command: str, 
-        log_file: Optional[Path | str] = None,
         devnull = False,
         dry_run = False,
+        log_file: Optional[Path | str] = None,
         logger: Optional[logging.Logger] = None
         ) -> None:
-    """
-    Standard runner. If log_file is provided, streams output to disk.
+    """Standard runner. If log_file is provided, streams output to disk.
     If devnull is set to true, no logs and all outputs to DEVNULL.
-    This is memory-efficient for huge outputs.
     """
     if dry_run:
         msg = f"[DRY RUN]: {formatted_command}"
@@ -79,7 +77,7 @@ def run_check_output_to_str(
         formatted_command: str,
         dry_run = False,
     ) -> str:    
-    """Returns stdout as string. Good for getting a single ID or path."""
+    """Returns stdout as string. Good for getting a single string, path, or short json string."""
     if dry_run:
         msg = f"[DRY RUN]: {formatted_command}"
         print(msg)
@@ -90,9 +88,8 @@ def run_check_output_to_str(
 
 
 def run_and_log(formatted_command: str, logger: logging.Logger):
-    """
-    Runs a command and streams its stdout/stderr line-by-line into 
-    the logger. Best for long-running bioinfo tools.
+    """Runs a command and streams its stdout/stderr line-by-line into 
+    the logger.
     """
     logger.info(f"Running command: {formatted_command}")
     

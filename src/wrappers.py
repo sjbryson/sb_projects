@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 @dataclass(kw_only=True)
-class BioTool():
+class Wrapper():
     dry_run: InitVar[bool] = False
     cmd:     str = field(default="", init=False, repr=False)
 
@@ -47,30 +47,50 @@ class BioTool():
                         raise FileNotFoundError(f"Missing: {path_obj}")
                 if metadata_type == 'output_file':
                     path_obj.parent.mkdir(parents=True, exist_ok=True)
-
+    
     def build(self) -> str:
         """Format self.cmd string with attribute values."""
         return " ".join(self.cmd.format(**asdict(self)).split())
+
+
+####################
+## -- FASTP QC -- ##
+####################
+@dataclass(kw_only=True)
+class FastpQC(Wrapper):
+    gz:            Optional[int] = field(default=6)
+    cut_win_size:  Optional[int] = field(default=5)
+    cut_mean_qual: Optional[int] = field(default=25)
+    min_length:    Optional[int] = field(default=100)
+    threads:       Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-w {value}'})
+    output_json:   Path | str = field(metadata={'type': 'output_file'})
+    output_html:   Path | str = field(metadata={'type': 'output_file'})
+    in_r1:         Path | str = field(metadata={'type': 'input_file'})
+    in_r2:         Path | str = field(metadata={'type': 'input_file'})
+    out_r1:        Path | str = field(metadata={'type': 'output_file'})
+    out_r2:        Path | str = field(metadata={'type': 'output_file'})
+    cmd:           str = "fastp  -D -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} {threads} \
+                          -j {output_json} -h {output_html} -i {in_r1} -I {in_r2} -o {out_r1} -O {out_r2}"
 
 ####################
 ## -- Minimap2 -- ##
 ####################
 @dataclass(kw_only=True)
-class PreIndexMinimap2SR(BioTool):
+class PreIndexMinimap2SR(Wrapper):
     input_fasta: Path | str = field(metadata={'type': 'input_file'})
     output_mmi:  Path | str = field(metadata={'type': 'output_file'})
     threads:     Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:         str = "minimap2 -k 21 -w 11 {threads} -d {output_mmi} {input_fasta}"
 
 @dataclass(kw_only=True)
-class PreIndexMinimap2LR(BioTool):
+class PreIndexMinimap2LR(Wrapper):
     input_fasta: Path | str = field(metadata={'type': 'input_file'})
     output_mmi:  Path | str = field(metadata={'type': 'output_file'})
     threads:     Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:         str = "minimap2 -H {threads} -d {output_mmi} {input_fasta}"
 
 @dataclass(kw_only=True)
-class Minimap2MapSRtoSortedBam(BioTool):
+class Minimap2MapSRtoSortedBam(Wrapper):
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     r1:         Path | str = field(metadata={'type': 'input_file'})
     r2:         Path | str = field(metadata={'type': 'input_file'})
@@ -79,7 +99,7 @@ class Minimap2MapSRtoSortedBam(BioTool):
     cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools sort -o - > {output_bam}"
 
 @dataclass(kw_only=True)
-class Minimap2SRHumanDepletion(BioTool):
+class Minimap2SRHumanDepletion(Wrapper):
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     r1:         Path | str = field(metadata={'type': 'input_file'})
     r2:         Path | str = field(metadata={'type': 'input_file'})
@@ -87,8 +107,12 @@ class Minimap2SRHumanDepletion(BioTool):
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:        str = "minimap2 -ax sr --secondary=no {threads} {input_mmi} {r1} {r2} | samtools sort -o - > {output_bam}"
 
+    ## Fix to use stream_filter --> fss2pfq
+
+
+
 @dataclass(kw_only=True)
-class Minimap2MapLR5(BioTool):
+class Minimap2MapLR5(Wrapper):
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     reads:      Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
@@ -96,7 +120,7 @@ class Minimap2MapLR5(BioTool):
     cmd:        str = "minimap2 -ax asm5 {threads} {input_mmi} {reads} | samtools sort -o {output_bam}"
 
 @dataclass(kw_only=True)
-class Minimap2MapLR20(BioTool):
+class Minimap2MapLR20(Wrapper):
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     reads:      Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
@@ -105,7 +129,7 @@ class Minimap2MapLR20(BioTool):
 
 ## -- host read depletion -- ##
 @dataclass(kw_only=True)
-class MinimapFilterPairedFastq(BioTool):
+class MinimapFilterPairedFastq(Wrapper):
     """Standard Host Depletion: write unmapped pairs to paired fastq."""
     input_mmi:   Path | str = field(metadata={'type': 'input_file'})
     r1:          Path | str = field(metadata={'type': 'input_file'})
@@ -117,11 +141,11 @@ class MinimapFilterPairedFastq(BioTool):
     cmd:         str = "minimap2 -ax sr --secondary=no {threads} {input_mmi} {r1} {r2} | \
                         samtools sort -n - | \
                         filter_bam_to_paired_fastq {threads} --r1 {filtered_r1} --r2 {filtered_r2} --max-mapq {mapq}"
-    
+    ## Fix to use stream_filter --> fss2pfq
 
 ## -- virus mapping --##
 @dataclass(kw_only=True)
-class MinimapAlignToSortedBam(BioTool):
+class MinimapAlignToSortedBam(Wrapper):
     """Standard virus detection: write to position sorted bam."""
     input_mmi:  Path | str = field(metadata={'type': 'input_file'})
     r1:         Path | str = field(metadata={'type': 'input_file'})
@@ -133,7 +157,7 @@ class MinimapAlignToSortedBam(BioTool):
 
 ## -- deduplicate bam --##
 @dataclass(kw_only=True)
-class DeDuplicateToSortedBam(BioTool):
+class DeDuplicateToSortedBam(Wrapper):
     """Standard virus detection: mark and remove PCR duplicates."""
     input_bam:  Path | str = field(metadata={'type': 'input_file'})
     output_bam: Path | str = field(metadata={'type': 'output_file'})
@@ -148,51 +172,51 @@ class DeDuplicateToSortedBam(BioTool):
 ## -- Samtools -- ##
 ####################
 @dataclass(kw_only=True)
-class SamtoolsSort(BioTool):
+class SamtoolsSort(Wrapper):
     sorted_bam: Path | str = field(metadata={'type': 'output_file'})
     input_bam:  Path | str = field(metadata={'type': 'input_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-@ {value}'})
     cmd:        str = "samtools sort {threads} -o {sorted_bam} {input_bam}"
 
 @dataclass(kw_only=True)
-class SamtoolsIndex(BioTool):
+class SamtoolsIndex(Wrapper):
     sorted_bam: Path | str = field(metadata={'type': 'output_file'})
     cmd:        str = "samtools index {sorted_bam}"
 
 @dataclass(kw_only=True)
-class SamtoolsMpileup(BioTool):
+class SamtoolsMpileup(Wrapper):
     refernce_fasta: Path | str = field(metadata={'type': 'input_file'})
     sorted_bam:     Path | str = field(metadata={'type': 'input_file'})
     output_pileup:  Path | str = field(metadata={'type': 'output_file'})
     cmd:            str = "samtools mpileup -f {refernce_fasta} {sorted_bam} > {output_pileup}"
 
 @dataclass(kw_only=True)
-class SamtoolsStats(BioTool):
+class SamtoolsStats(Wrapper):
     sorted_bam:  Path | str = field(metadata={'type': 'input_file'})
     output_file: Path | str = field(metadata={'type': 'output_file'})
     cmd:         str = "samtools stats {sorted_bam} > {output_file}"
 
 @dataclass(kw_only=True)
-class SamtoolsFlagstat(BioTool):
+class SamtoolsFlagstat(Wrapper):
     sorted_bam:  Path | str = field(metadata={'type': 'input_file'})
     output_file: Path | str = field(metadata={'type': 'output_file'})
     cmd:         str = "samtools flagstat {sorted_bam} > {output_file}"
 
 @dataclass(kw_only=True)
-class SamtoolsIdxstats(BioTool):
+class SamtoolsIdxstats(Wrapper):
     sorted_bam: Path | str = field(metadata={'type': 'input_file'})
     output_tsv: Path | str = field(metadata={'type': 'output_file'})
     cmd:        str = "samtools idxstats {sorted_bam} > {output_tsv}"
 
 @dataclass(kw_only=True)
-class GetProperMappedIDs(BioTool):
+class GetProperMappedIDs(Wrapper):
     sorted_bam:  Path | str = field(metadata={'type': 'input_file'})
     output_file: Path | str = field(metadata={'type': 'output_file'})
     threads:     int = 1
     cmd:         str = "samtools view -f 1 -F 12 -@ {threads} {sorted_bam} | cut -f1 | sort -u > {output_file}"
 
 @dataclass(kw_only=True)
-class GetOrphanMappedIDs(BioTool):
+class GetOrphanMappedIDs(Wrapper):
     sorted_bam:  Path | str = field(metadata={'type': 'input_file'})
     output_file: Path | str = field(metadata={'type': 'output_file'})
     threads:     Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-@ {value}'})
@@ -202,14 +226,14 @@ class GetOrphanMappedIDs(BioTool):
 ## -- Blast Tools -- ##
 #######################
 @dataclass(kw_only=True)
-class MakeBlastnDB(BioTool):
+class MakeBlastnDB(Wrapper):
     input_fasta: Path | str = field(metadata={'type': 'input_file'})
     db_path:     Path | str = field(metadata={'type': 'output_file'})
     db_name:     str
     cmd:         str = "makeblastdb -in {input_fasta} -input_type fasta -dbtype nucl -out {db_path} -parse_seqids -title {db_name}"
 
 @dataclass(kw_only=True)
-class Blastn(BioTool):
+class Blastn(Wrapper):
     database:    str
     input_fasta: Path | str = field(metadata={'type': 'input_file'})
     output_tsv:  Path | str = field(metadata={'type': 'output_file'})
@@ -221,21 +245,21 @@ class Blastn(BioTool):
 ## -- SHELL Commands -- ##
 ##########################
 @dataclass(kw_only=True)
-class GetContigPerBaseCoverageFromPileup(BioTool):
+class GetContigPerBaseCoverageFromPileup(Wrapper):
     contig_id:    str
     pileup_file:  Path | str = field(metadata={'type': 'input_file'})
     output_tsv:   Path | str = field(metadata={'type': 'output_file'})
     cmd:          str = "awk '$1 == \"{reference_id}\" {{print $2 \"\\t\" $4}}' {pileup_file} > {output_tsv}"
 
 @dataclass(kw_only=True)
-class UniqueIdList(BioTool):
+class UniqueIdList(Wrapper):
     file_a:     Path = field(metadata={'type': 'input_file'})
     file_b:     Path = field(metadata={'type': 'input_file'})
     output_txt: Path = field(metadata={'type': 'output_file'})
     cmd:        str  = "cat {file_a} {file_b} | sort -u > {output_txt}"
 
 @dataclass(kw_only=True)
-class GzipKeepFile(BioTool):
+class GzipKeepFile(Wrapper):
     """Compress a file using gzip, output to a new path."""
     input_file:  Path | str = field(metadata={'type': 'input_file'})
     output_file: Path | str = field(metadata={'type': 'output_file'})
@@ -244,18 +268,31 @@ class GzipKeepFile(BioTool):
     cmd:         str = "gzip -c {level} {force} {input_file} > {output_file}"
 
 @dataclass(kw_only=True)
-class GzipReplaceFile(BioTool):
+class GzipReplaceFile(Wrapper):
     """Compress a file in-place using gzip - original is deleted."""
     input_file:  Path | str = field(metadata={'type': 'input_file'})
     level:       Optional[int] = field(default=6, metadata={'type': 'value_flag', 'flag_fmt': '-{value}'})
     force:       bool = field(default=False, metadata={'type': 'flag', 'option': '-f'})
     cmd:         str = "gzip -c {level} {force} {input_file} > {output_file}"
 
-####################
-## -- SB_Tools -- ##
-####################
+###################
+## -- SB_Bits -- ##
+###################
+
+
 @dataclass(kw_only=True)
-class SBFilterFastq(BioTool):
+class ConvertPairedFastqBZ2toGz(Wrapper):
+    """Convert paired fastq with Bz2 compression to Gz compressed files."""
+    r1_fastq:      Path | str = field(metadata={'type': 'input_file'})
+    r2_fastq:      Path | str = field(metadata={'type': 'input_file'})
+    output_prefix: str
+    threads:       Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cmd:           str = "pfqbz2gz {threads} --r1 {r1_fastq} --r2 {r2_fastq} -o {output_prefix}"
+
+
+
+@dataclass(kw_only=True)
+class SBFilterFastq(Wrapper):
     r1_fastq:       Path | str = field(metadata={'type': 'input_file'})
     r2_fastq:       Path | str = field(metadata={'type': 'input_file'})
     input_file:     Path | str = field(metadata={'type': 'input_file'})
@@ -263,4 +300,4 @@ class SBFilterFastq(BioTool):
     gz:             bool = field(default=False, metadata={'type': 'flag', 'option': '--gz'})
     keep:           bool = field(default=False, metadata={'type': 'flag', 'option': '--keep'})
     exclude:        bool = field(default=True, metadata={'type': 'flag', 'option': '--exclude'})
-    cmd:            str = "sb_filter_fastq {gz} {invert} --r1 {r1_fastq} --r2 {r2_fastq} --filter {input_file} --out-prefix {output_prefix}"
+    cmd:            str = "sb_filter_fastq {keep} {exclude} {gz} --r1 {r1_fastq} --r2 {r2_fastq} --filter {input_file} --out-prefix {output_prefix}"
