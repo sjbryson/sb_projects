@@ -58,7 +58,8 @@ class Wrapper():
 ####################
 @dataclass(kw_only=True)
 class FastpQC(Wrapper):
-    gz:            Optional[int] = field(default=6)
+    deduplicate:   bool = field(default=False, metadata={'type': 'flag', 'option': '-D'})
+    gz:            Optional[int] = field(default=6) # gz compression level (1..9)
     cut_win_size:  Optional[int] = field(default=5)
     cut_mean_qual: Optional[int] = field(default=25)
     min_length:    Optional[int] = field(default=100)
@@ -69,7 +70,7 @@ class FastpQC(Wrapper):
     in_r2:         Path | str = field(metadata={'type': 'input_file'})
     out_r1:        Path | str = field(metadata={'type': 'output_file'})
     out_r2:        Path | str = field(metadata={'type': 'output_file'})
-    cmd:           str = "fastp  -D -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} {threads} \
+    cmd:           str = "fastp  {deduplicate} -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} {threads} \
                           -j {output_json} -h {output_html} -i {in_r1} -I {in_r2} -o {out_r1} -O {out_r2}"
 
 ####################
