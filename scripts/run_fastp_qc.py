@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 """
 Samuel Joseph Bryson
@@ -9,12 +8,11 @@ Copyright 2026
 """
 import argparse
 from pathlib import Path
-from typing import Tuple
 import json
-from src.config_manager import ConfigManager
-from src.subprocess_utilities import run_check_call
-from src.file_utilities import delete_file
-from wrappers import FastpQC
+from sb_projects.src.wrappers import FastpQC
+from sb_projects.src.config_manager import ConfigManager
+from sb_projects.src.subprocess_utilities import run_check_call
+#from sb_projects.src.file_utilities import delete_file
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to run fastq QC on a set of paired reads.")
@@ -74,15 +72,30 @@ def run_fastp_qc(
         dry_run = dry_run,
     )
 
-def parse_fastp_json(json_file: Path) -> dict:
+def parse_fastp_json(json_file: Path, dry_run: bool) -> dict:
     """Parse the fastp JSON output file and return a dict with specific QC metrics."""
-    
+    if dry_run == True:
+        # fake data for dry_run tests
+        metrics = {
+            "duplication_rate"     : 0.1,
+            "adapter_trimmed_reads": 1,
+            "adapter_trimmed_bases": 1,
+            "r1_preQC_total_reads" : 1,
+            "r2_preQC_total_reads" : 1,
+            "r1_preQC_total_bases" : 1,
+            "r2_preQC_total_bases" : 1,
+            "r1_postQC_total_reads": 1,
+            "r2_postQC_total_reads": 1,
+            "r1_postQC_total_bases": 1,
+            "r2_postQC_total_bases": 1,
+        }
+        return metrics
     with open(json_file, 'r') as f:
         data = json.load(f)
     
     # Specific json keys to extract
     metrics = {
-        "duplication_rate": data.get("duplication", {}).get("rate"),
+        "duplication_rate"     : data.get("duplication", {}).get("rate"),
         "adapter_trimmed_reads": data.get("adapter_cutting", {}).get("adapter_trimmed_reads"),
         "adapter_trimmed_bases": data.get("adapter_cutting", {}).get("adapter_trimmed_bases"),
     }
@@ -91,19 +104,20 @@ def parse_fastp_json(json_file: Path) -> dict:
     groups = {
         "read1_before_filtering": "r1_preQC", 
         "read2_before_filtering": "r2_preQC",
-        "read1_after_filtering": "r1_postQC", 
-        "read2_after_filtering": "r2_postQC"
+        "read1_after_filtering" : "r1_postQC", 
+        "read2_after_filtering" : "r2_postQC",
     }
     
-    group_keys = [  #"q20_bases", "q30_bases", "q40_bases", "total_cycles"
+    group_keys = [              # Could add: "q20_bases", "q30_bases", "q40_bases", "total_cycles"
         "total_reads", 
         "total_bases", 
     ]
+    
     # Add read_groups data to metrics dict
     for k,v in groups.items():
         group_data = data.get(k, {})
         for key in group_keys:
-            # Creates keys like 'read1_before_filtering_total_reads'
+            # Creates keys like 'r1_preQC_total_reads'
             metrics[f"{v}_{key}"] = group_data.get(key)
 
     return metrics
@@ -121,20 +135,20 @@ def main():
     # Load config
     proj_config = ConfigManager(config_file = config)
     
+    ## FastpQC ##
+
     # Define output columns
-    workflow_outputs = [
+    fastp_outputs = [
         "qc_r1",
         "qc_r2",
         "fastp_json",
-        #"",
-        #"",
     ]
     
     # Update config with output fields
-    for output in workflow_outputs:
+    for output in fastp_outputs:
         proj_config.add_column(name = output, default_value = "incomplete")
     
-    # Iterate over rows in the config and run fastp
+    # Run fastp on each sample
     for index, row in proj_config:
 
         try:
@@ -179,10 +193,56 @@ def main():
 
             # delete html file?
             #delete_file(output_html, dry_run = dry_run)
-
+        finally:
             # save updated config after processing each row
             proj_config.save()
+
+    ## FastpQC Stats ##
+    
+    # Define output columns
+    fastp_stats = [
+        "duplication_rate",
+        "adapter_trimmed_reads",
+        "adapter_trimmed_bases",
+        "r1_preQC_total_reads",
+        "r2_preQC_total_reads",
+        "r1_preQC_total_bases",
+        "r2_preQC_total_bases",
+        "r1_postQC_total_reads",
+        "r2_postQC_total_reads",
+        "r1_postQC_total_bases",
+        "r2_postQC_total_bases",
+    ]
+    
+    # Update config with output fields
+    for stat in fastp_stats:
+        proj_config.add_column(name = stat, default_value = "incomplete")
+    
+    # Run parse_fastp_json for each sample
+
+    for index, row in proj_config:
+
+        try:
+            if dry_run == True: 
+                print(f"\n{index}\t{row}") 
+            
+            # Setup inputs & outputs
+            SAMPLE      = row["sample"]
+            fastp_json  = row["fastp_json"]
+            qc_stats = parse_fastp_json(fastp_json, dry_run = dry_run)
         
+        except Exception as e:
+            print(f"Stats Error: {e}")
+            continue
+
+        else:
+            # Update config with parsed fastp stats
+            for k,v in qc_stats.items():
+                proj_config.update_row(index, k, v)
+
+        finally:
+            # save updated config after processing each row
+            proj_config.save()
 
 if __name__ == "__main__":
     main()
