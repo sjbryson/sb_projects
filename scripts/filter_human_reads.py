@@ -11,11 +11,11 @@ Copyright 2026
 from pathlib import Path
 from typing import Tuple
 import json
-from src.config_manager import ConfigManager
-from src.subprocess_utilities import run_check_output_to_str
-from src.fastx_utilities import fastq_count_reads
-from src.file_utilities import delete_file, count_lines
-from wrappers import MinimapFilterPairedFastq
+from sb_projects.config_manager import ConfigManager
+from sb_projects.subprocess_utilities import run_check_output_to_str
+from sb_projects.fastx_utilities import fastq_count_reads
+from sb_projects.file_utilities import delete_file, count_lines
+from sb_projects.wrappers import MinimapFilterPairedFastq
 
 # Database paths
 DB_DIR      = Path.home() / "bio_db"

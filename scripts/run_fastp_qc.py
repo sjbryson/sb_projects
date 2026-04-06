@@ -9,10 +9,10 @@ Copyright 2026
 import argparse
 from pathlib import Path
 import json
-from sb_projects.src.wrappers import FastpQC
-from sb_projects.src.config_manager import ConfigManager
-from sb_projects.src.subprocess_utilities import run_check_call
-#from sb_projects.src.file_utilities import delete_file
+from sb_projects.wrappers import FastpQC
+from sb_projects.config_manager import ConfigManager
+from sb_projects.subprocess_utilities import run_check_call
+#from sb_projects.file_utilities import delete_file
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to run fastq QC on a set of paired reads.")

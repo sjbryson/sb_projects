@@ -13,10 +13,10 @@ Copyright 2026
 
 from pathlib import Path
 from typing import Tuple
-from src.config_manager import ConfigManager
-from src.subprocess_utilities import run_check_call
-from src.file_utilities import count_lines
-from wrappers import (
+from sb_projects.config_manager import ConfigManager
+from sb_projects.subprocess_utilities import run_check_call
+from sb_projects.file_utilities import count_lines
+from sb_projects.wrappers import (
     Minimap2MapSRtoSortedBam,
     SamtoolsIndex,
     GetProperMappedIDs,

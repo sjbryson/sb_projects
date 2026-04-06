@@ -7,7 +7,6 @@ Copyright 2026
 
 import shutil
 from pathlib import Path
-from typing import Optional
 from subprocess import check_output
 
 def clean_dir(directory: Path | str, dry_run: bool = False) -> None:

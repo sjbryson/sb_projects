@@ -13,14 +13,14 @@ import csv
 from pathlib import Path
 from typing import Tuple
 
-from src.ictv_graph.types import (
+from sb_projects.ictv_graph.types import (
     IsolateType,
     GenomeStatus,
     GenomeType,
     HostSource
 )
 
-from src.ictv_graph.nodes import (
+from sb_projects.ictv_graph.nodes import (
     ICTVtaxon,
     ICTVisolate,
     SequenceAccession

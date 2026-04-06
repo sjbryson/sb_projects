@@ -7,7 +7,7 @@ Copyright 2026
 import pandas as pd
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Iterator
+from typing import Optional, Dict, Any, Iterator
 
 @dataclass
 class ConfigManager:
