@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+**/.DS_Store
+
+# Python build/metadata
+*.egg-info/
+src/*.egg-info/
+build/
+dist/
+
+# Python bytecode
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+venv/
+.venv/
+env/
+.env
