@@ -159,7 +159,7 @@ def main():
             index = result["index"]
             
             if result["success"]:
-                # Update config with output files in the MAIN process
+                # Update config with output files
                 proj_config.update_row(index, "r1_gz", result["r1_gz"])
                 proj_config.update_row(index, "r2_gz", result["r2_gz"])
             else:
