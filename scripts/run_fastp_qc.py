@@ -37,10 +37,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry_run", action="store_true", default=False, 
                         help="If set, perform a trial run printing commands (default: False).")
     
-    ## --- ToDo: --- ##
-    # add sample column name
-    # add r1 column name
-    # add r2 column name
+    parser.add_argument("--sample_col", type=str, default="sample", 
+                        help="Column name for samples in config file (str).")
+    
+    parser.add_argument("--r1_col", type=str, default="r1", 
+                        help="Column name for input R1 in config file (str).")
+    
+    parser.add_argument("--r2_col", type=str, default="r2", 
+                        help="Column name for input R2 in config file (str).")
 
     return parser.parse_args()
 
@@ -135,18 +139,21 @@ def sample_worker(task_args: dict) -> dict:
     output_dir = task_args["output_dir"]
     threads    = task_args["threads"]
     dry_run    = task_args["dry_run"]
+    sample_col = task_args["sample_col"]
+    r1_col     = task_args["r1_col"]
+    r2_col     = task_args["r2_col"]
 
     if dry_run: 
         print(f"\nWorker processing: {index}\t{row}") 
 
     # Setup inputs and outputs
-    SAMPLE      = row["sample"]
+    SAMPLE      = row[sample_col]
     fastp_json  = f"{SAMPLE}.json"
     output_json = output_dir / fastp_json
     fastp_html  = f"{SAMPLE}.html"
     output_html = output_dir / fastp_html
-    raw_r1      = row["r1"]
-    raw_r2      = row["r2"]
+    raw_r1      = row[r1_col]
+    raw_r2      = row[r2_col]
     in_r1       = input_dir / raw_r1
     in_r2       = input_dir / raw_r2
     qc_r1       = f"{SAMPLE}.qc.r1.fq.gz"
@@ -172,13 +179,13 @@ def sample_worker(task_args: dict) -> dict:
 
         # Return all results back to main process
         return {
-            "index": index,
-            "success": True,
-            "qc_r1": qc_r1,
-            "qc_r2": qc_r2,
+            "index":      index,
+            "success":    True,
+            "qc_r1":      qc_r1,
+            "qc_r2":      qc_r2,
             "fastp_json": fastp_json,
-            "stats": qc_stats,
-            "error": None
+            "stats":      qc_stats,
+            "error":      None
         }
 
     except Exception as e:
@@ -194,6 +201,9 @@ def main():
     threads    = args.threads
     processes  = args.processes
     dry_run    = True if args.dry_run else False
+    sample_col = args.sample_col
+    r1_col     = args.r1_col
+    r2_col     = args.r2_col
 
     # Load config
     proj_config = ConfigManager(config_file = config)
@@ -217,12 +227,15 @@ def main():
     tasks = []
     for index, row in proj_config:
         tasks.append({
-            "index": index,
-            "row": row,
-            "input_dir": input_dir,
+            "index":      index,
+            "row":        row,
+            "input_dir":  input_dir,
             "output_dir": output_dir,
-            "threads": threads,
-            "dry_run": dry_run
+            "threads":    threads,
+            "dry_run":    dry_run,
+            "sample_col": sample_col,
+            "r1_col":     r1_col,
+            "r2_col":     r2_col,
         })
 
     # Start the multiprocessing pool

@@ -34,10 +34,17 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--dry_run", action="store_true", default=False, 
                         help="If set, perform a trial run printing commands (default: False).")
+    
+    parser.add_argument("--sample_col", type=str, default="sample", 
+                        help="Column name for samples in config file (str).")
+    
+    parser.add_argument("--r1_col", type=str, default="r1_bz2", 
+                        help="Column name for input R1 in config file (str).")
+    
+    parser.add_argument("--r2_col", type=str, default="r2_bz2", 
+                        help="Column name for input R2 in config file (str).")
+
     ## --- ToDo: --- ##
-    # add sample column name
-    # add input r1 column name --> currently "r1_bz2"
-    # add input r2 column name --> currently "r2_bz2"
     # add output r1 column name --> currently "r1_gz"
     # add output r2 column name --> currently "r2_gz"
 
@@ -62,8 +69,8 @@ def run_pfqbz2gz(
     cmd = process.build()
     run_check_call(
         formatted_command = cmd, 
-        devnull = True,
-        dry_run = dry_run,
+        devnull           = True,
+        dry_run           = dry_run,
     )
 
 def sample_worker(task_args: dict) -> dict:
@@ -74,13 +81,16 @@ def sample_worker(task_args: dict) -> dict:
     output_dir = task_args["output_dir"]
     threads    = task_args["threads"]
     dry_run    = task_args["dry_run"]
+    sample_col = task_args["sample_col"]
+    r1_col     = task_args["r1_col"]
+    r2_col     = task_args["r2_col"]
 
     if dry_run: 
         print(f"\nWorker processing: {index}\t{row}") 
 
-    SAMPLE     = row["sample"]
-    r1_bz2     = row["r1_bz2"]
-    r2_bz2     = row["r2_bz2"]
+    SAMPLE     = row[sample_col]
+    r1_bz2     = row[r1_col]
+    r2_bz2     = row[r2_col]
     in_r1      = input_dir / r1_bz2
     in_r2      = input_dir / r2_bz2
     out_prefix = output_dir / SAMPLE
@@ -114,6 +124,9 @@ def main():
     threads    = args.threads
     processes  = args.processes
     dry_run    = True if args.dry_run else False
+    sample_col = args.sample_col
+    r1_col     = args.r1_col
+    r2_col     = args.r2_col
 
     # Load config
     proj_config = ConfigManager(config_file = config)
@@ -127,12 +140,15 @@ def main():
     tasks = []
     for index, row in proj_config:
         tasks.append({
-            "index": index,
-            "row": row,
-            "input_dir": input_dir,
+            "index":      index,
+            "row":        row,
+            "input_dir":  input_dir,
             "output_dir": output_dir,
-            "threads": threads,
-            "dry_run": dry_run
+            "threads":    threads,
+            "dry_run":    dry_run,
+            "sample_col": sample_col,
+            "r1_col":     r1_col,
+            "r2_col":     r2_col,
         })
 
     # Start the multiprocessing pool
