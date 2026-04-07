@@ -33,9 +33,6 @@ def parse_args() -> argparse.Namespace:
     
     parser.add_argument("--processes", type=int, default=2, 
                         help="Number of parallel subprocesses (int, default: 2).")
-
-    parser.add_argument("--dry_run", action="store_true", default=False, 
-                        help="If set, perform a trial run printing commands (default: False).")
     
     parser.add_argument("--sample_col", type=str, default="sample", 
                         help="Column name for samples in config file (str).")
@@ -45,6 +42,9 @@ def parse_args() -> argparse.Namespace:
     
     parser.add_argument("--r2_col", type=str, default="r2_bz2", 
                         help="Column name for input R2 in config file (str).")
+    
+    parser.add_argument("--dry_run", action="store_true", default=False, 
+                        help="If set, perform a trial run printing commands (default: False).")
 
     ## --- ToDo: --- ##
     # add output r1 column name --> currently "r1_gz"
