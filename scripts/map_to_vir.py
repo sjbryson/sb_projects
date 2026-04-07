@@ -1,4 +1,4 @@
-
+#! python
 
 """
 Samuel Joseph Bryson
@@ -16,7 +16,7 @@ from typing import Tuple
 from sb_projects.config_manager import ConfigManager
 from sb_projects.subprocess_utilities import run_check_call
 from sb_projects.file_utilities import count_lines
-from sb_projects.wrappers import (
+from sb_projects.wrapper import (
     Minimap2MapSRtoSortedBam,
     SamtoolsIndex,
     GetProperMappedIDs,

@@ -11,7 +11,9 @@ import argparse
 import multiprocessing as mp
 from pathlib import Path
 import json
-from sb_projects.wrappers import FastpQC
+from typing import Optional
+from dataclasses import dataclass, field
+from sb_projects.wrapper import Wrapper
 from sb_projects.config_manager import ConfigManager
 from sb_projects.subprocess_utilities import run_check_call
 
@@ -47,6 +49,24 @@ def parse_args() -> argparse.Namespace:
                         help="Column name for input R2 in config file (str).")
 
     return parser.parse_args()
+
+# Fastp Wrapper subclass
+@dataclass(kw_only=True)
+class FastpQC(Wrapper):
+    deduplicate:   bool          = field(default=False, metadata={'type': 'flag', 'option': '-D'})
+    gz:            Optional[int] = field(default=6) # gz compression level (1..9)
+    cut_win_size:  Optional[int] = field(default=5)
+    cut_mean_qual: Optional[int] = field(default=25)
+    min_length:    Optional[int] = field(default=100)
+    threads:       Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-w {value}'})
+    output_json:   Path | str    = field(metadata={'type': 'output_file'})
+    output_html:   Path | str    = field(metadata={'type': 'output_file'})
+    in_r1:         Path | str    = field(metadata={'type': 'input_file'})
+    in_r2:         Path | str    = field(metadata={'type': 'input_file'})
+    out_r1:        Path | str    = field(metadata={'type': 'output_file'})
+    out_r2:        Path | str    = field(metadata={'type': 'output_file'})
+    cmd:           str           = "fastp  {deduplicate} -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} \
+                                   {threads} -j {output_json} -h {output_html} -i {in_r1} -I {in_r2} -o {out_r1} -O {out_r2}"
 
 # Run fastp on a set of r1 and r2 <sample>_<r#>.fq.gz
 def run_fastp_qc(
@@ -87,7 +107,7 @@ def parse_fastp_json(json_file: Path, dry_run: bool) -> dict:
     if dry_run == True:
         # fake data for dry_run tests
         metrics = {
-            "duplication_rate"     : 0.1,
+            "duplication_rate"     : 1,
             "adapter_trimmed_reads": 1,
             "adapter_trimmed_bases": 1,
             "r1_preQC_total_reads" : 1,
@@ -221,7 +241,7 @@ def main():
     ]
     
     for col in output_columns:
-        proj_config.add_column(name = col, default_value = "incomplete")
+        proj_config.add_column(name = col, default_value = None)
     
     # Build worker pool task list 
     tasks = []

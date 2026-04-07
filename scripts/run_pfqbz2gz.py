@@ -10,7 +10,9 @@ Copyright 2026
 import argparse
 from pathlib import Path
 import multiprocessing as mp
-from sb_projects.wrappers import ConvertPairedFastqBZ2toGz
+from typing import Optional
+from dataclasses import dataclass, field
+from sb_projects.wrapper import Wrapper
 from sb_projects.config_manager import ConfigManager
 from sb_projects.subprocess_utilities import run_check_call
 
@@ -50,6 +52,16 @@ def parse_args() -> argparse.Namespace:
 
     return parser.parse_args()
 
+# Wrapper subclass for bz2 to gz conversion tool
+@dataclass(kw_only=True)
+class ConvertPairedFastqBZ2toGz(Wrapper):
+    """Convert paired fastq with Bz2 compression to Gz compressed files."""
+    r1_fastq:      Path | str    = field(metadata={'type': 'input_file'})
+    r2_fastq:      Path | str    = field(metadata={'type': 'input_file'})
+    output_prefix: Path | str
+    threads:       Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cmd:           str           = "pfqbz2gz {threads} --r1 {r1_fastq} --r2 {r2_fastq} -o {output_prefix}"
+
 # Run fastp on a set of r1 and r2 <sample>_<r#>.fq.gz
 def run_pfqbz2gz(
         threads:     int,
@@ -61,14 +73,14 @@ def run_pfqbz2gz(
     # Init a ConvertPairedFastqBZ2toGz Wrapper obj.
     process = ConvertPairedFastqBZ2toGz(
         r1_fastq      = in_r1,
-        r2_fastq      = in_r2, # default
-        output_prefix = out_prefix, # default
-        threads       = threads, # default
+        r2_fastq      = in_r2,
+        output_prefix = out_prefix,
+        threads       = threads,
         dry_run       = dry_run,
     )
     cmd = process.build()
     run_check_call(
-        formatted_command = cmd, 
+        formatted_command = cmd,
         devnull           = True,
         dry_run           = dry_run,
     )
@@ -134,7 +146,7 @@ def main():
     # Define output columns & add to config
     fastp_outputs = ["r1_gz", "r2_gz"]
     for output in fastp_outputs:
-        proj_config.add_column(name = output, default_value = "incomplete")
+        proj_config.add_column(name = output, default_value = None)
     
     # Build worker pool task list 
     tasks = []

@@ -1,4 +1,4 @@
-
+#! python
 
 """
 Samuel Joseph Bryson
@@ -24,7 +24,7 @@ from sb_projects.config_manager import ConfigManager
 from sb_projects.subprocess_utilities import run_check_call
 from sb_projects.fastx_utilities import fastq_count_reads
 from sb_projects.file_utilities import delete_file, count_lines
-from sb_projects.wrappers import (
+from sb_projects.wrapper import (
     Minimap2SRHumanDepletion,
     Minimap2MapSRtoBam,
     SamtoolsSort,

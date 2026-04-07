@@ -57,20 +57,20 @@ class Wrapper():
 ####################
 @dataclass(kw_only=True)
 class FastpQC(Wrapper):
-    deduplicate:   bool = field(default=False, metadata={'type': 'flag', 'option': '-D'})
+    deduplicate:   bool          = field(default=False, metadata={'type': 'flag', 'option': '-D'})
     gz:            Optional[int] = field(default=6) # gz compression level (1..9)
     cut_win_size:  Optional[int] = field(default=5)
     cut_mean_qual: Optional[int] = field(default=25)
     min_length:    Optional[int] = field(default=100)
     threads:       Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-w {value}'})
-    output_json:   Path | str = field(metadata={'type': 'output_file'})
-    output_html:   Path | str = field(metadata={'type': 'output_file'})
-    in_r1:         Path | str = field(metadata={'type': 'input_file'})
-    in_r2:         Path | str = field(metadata={'type': 'input_file'})
-    out_r1:        Path | str = field(metadata={'type': 'output_file'})
-    out_r2:        Path | str = field(metadata={'type': 'output_file'})
-    cmd:           str = "fastp  {deduplicate} -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} {threads} \
-                          -j {output_json} -h {output_html} -i {in_r1} -I {in_r2} -o {out_r1} -O {out_r2}"
+    output_json:   Path | str    = field(metadata={'type': 'output_file'})
+    output_html:   Path | str    = field(metadata={'type': 'output_file'})
+    in_r1:         Path | str    = field(metadata={'type': 'input_file'})
+    in_r2:         Path | str    = field(metadata={'type': 'input_file'})
+    out_r1:        Path | str    = field(metadata={'type': 'output_file'})
+    out_r2:        Path | str    = field(metadata={'type': 'output_file'})
+    cmd:           str           = "fastp  {deduplicate} -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} \
+                                   {threads} -j {output_json} -h {output_html} -i {in_r1} -I {in_r2} -o {out_r1} -O {out_r2}"
 
 ####################
 ## -- Minimap2 -- ##
@@ -97,17 +97,6 @@ class Minimap2MapSRtoSortedBam(Wrapper):
     output_bam: Path | str = field(metadata={'type': 'output_file'})
     threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:        str = "minimap2 -ax sr {threads} {input_mmi} {r1} {r2} | samtools sort -o - > {output_bam}"
-
-@dataclass(kw_only=True)
-class Minimap2SRHumanDepletion(Wrapper):
-    input_mmi:  Path | str = field(metadata={'type': 'input_file'})
-    r1:         Path | str = field(metadata={'type': 'input_file'})
-    r2:         Path | str = field(metadata={'type': 'input_file'})
-    output_bam: Path | str = field(metadata={'type': 'output_file'})
-    threads:    Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cmd:        str = "minimap2 -ax sr --secondary=no {threads} {input_mmi} {r1} {r2} | samtools sort -o - > {output_bam}"
-
-    ## Fix to use stream_filter --> fss2pfq
 
 
 

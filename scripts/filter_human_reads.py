@@ -1,4 +1,4 @@
-
+#! python
 
 """
 Samuel Joseph Bryson
@@ -15,7 +15,7 @@ from sb_projects.config_manager import ConfigManager
 from sb_projects.subprocess_utilities import run_check_output_to_str
 from sb_projects.fastx_utilities import fastq_count_reads
 from sb_projects.file_utilities import delete_file, count_lines
-from sb_projects.wrappers import MinimapFilterPairedFastq
+from sb_projects.wrapper import MinimapFilterPairedFastq
 
 # Database paths
 DB_DIR      = Path.home() / "bio_db"
