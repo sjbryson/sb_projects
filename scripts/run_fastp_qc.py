@@ -8,12 +8,13 @@ Copyright 2026
 - 2 - Parse json output to get filtering stats.
 """
 import argparse
+import multiprocessing as mp
 from pathlib import Path
 import json
 from sb_projects.wrappers import FastpQC
 from sb_projects.config_manager import ConfigManager
 from sb_projects.subprocess_utilities import run_check_call
-#from sb_projects.file_utilities import delete_file
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to run fastq QC on a set of paired reads.")
@@ -30,12 +31,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--threads", type=int, default=4, 
                         help="Number of threads to use (int, default: 4).")
     
+    parser.add_argument("--processes", type=int, default=2, 
+                        help="Number of parallel samples to process at once (int, default: 2).")
+    
     parser.add_argument("--dry_run", action="store_true", default=False, 
                         help="If set, perform a trial run printing commands (default: False).")
     
-    ## add sample column name
-    ## add r1 column name
-    ## add r2 column name
+    ## --- ToDo: --- ##
+    # add sample column name
+    # add r1 column name
+    # add r2 column name
 
     return parser.parse_args()
 
@@ -109,10 +114,8 @@ def parse_fastp_json(json_file: Path, dry_run: bool) -> dict:
         "read2_after_filtering" : "r2_postQC",
     }
     
-    group_keys = [              # Could add: "q20_bases", "q30_bases", "q40_bases", "total_cycles"
-        "total_reads", 
-        "total_bases", 
-    ]
+    # Could add: "q20_bases", "q30_bases", "q40_bases", "total_cycles"
+    group_keys = ["total_reads", "total_bases"] 
     
     # Add read_groups data to metrics dict
     for k,v in groups.items():
@@ -123,6 +126,64 @@ def parse_fastp_json(json_file: Path, dry_run: bool) -> dict:
 
     return metrics
 
+# Multiprocessing worker function
+def sample_worker(task_args: dict) -> dict:
+    """Worker function to run Fastp and parse the resulting JSON."""
+    index      = task_args["index"]
+    row        = task_args["row"]
+    input_dir  = task_args["input_dir"]
+    output_dir = task_args["output_dir"]
+    threads    = task_args["threads"]
+    dry_run    = task_args["dry_run"]
+
+    if dry_run: 
+        print(f"\nWorker processing: {index}\t{row}") 
+
+    # Setup inputs and outputs
+    SAMPLE      = row["sample"]
+    fastp_json  = f"{SAMPLE}.json"
+    output_json = output_dir / fastp_json
+    fastp_html  = f"{SAMPLE}.html"
+    output_html = output_dir / fastp_html
+    raw_r1      = row["r1"]
+    raw_r2      = row["r2"]
+    in_r1       = input_dir / raw_r1
+    in_r2       = input_dir / raw_r2
+    qc_r1       = f"{SAMPLE}.qc.r1.fq.gz"
+    qc_r2       = f"{SAMPLE}.qc.r2.fq.gz"
+    out_r1      = output_dir / qc_r1
+    out_r2      = output_dir / qc_r2
+
+    try:
+        # Step 1: Run Fastp
+        run_fastp_qc(
+            threads     = threads,
+            output_json = output_json,
+            output_html = output_html,
+            in_r1       = in_r1,
+            in_r2       = in_r2,
+            out_r1      = out_r1,
+            out_r2      = out_r2,
+            dry_run     = dry_run,
+        )
+
+        # Step 2: Parse JSON
+        qc_stats = parse_fastp_json(json_file=output_json, dry_run=dry_run)
+
+        # Return all results back to main process
+        return {
+            "index": index,
+            "success": True,
+            "qc_r1": qc_r1,
+            "qc_r2": qc_r2,
+            "fastp_json": fastp_json,
+            "stats": qc_stats,
+            "error": None
+        }
+
+    except Exception as e:
+        return {"index": index, "success": False, "error": str(e)}
+
 def main():
     
     # Parse args
@@ -131,6 +192,7 @@ def main():
     input_dir  = Path(args.input_dir)
     output_dir = Path(args.output_dir)
     threads    = args.threads
+    processes  = args.processes
     dry_run    = True if args.dry_run else False
 
     # Load config
@@ -138,111 +200,51 @@ def main():
     
     ## FastpQC ##
 
-    # Define output columns
-    fastp_outputs = [
-        "qc_r1",
-        "qc_r2",
-        "fastp_json",
+    # Define output columns and fill with default value: "incomplete".
+    output_columns = [
+        "qc_r1", "qc_r2", "fastp_json", "duplication_rate", 
+        "adapter_trimmed_reads", "adapter_trimmed_bases", 
+        "r1_preQC_total_reads", "r2_preQC_total_reads", 
+        "r1_preQC_total_bases", "r2_preQC_total_bases", 
+        "r1_postQC_total_reads", "r2_postQC_total_reads", 
+        "r1_postQC_total_bases", "r2_postQC_total_bases"
     ]
     
-    # Update config with output fields
-    for output in fastp_outputs:
-        proj_config.add_column(name = output, default_value = "incomplete")
+    for col in output_columns:
+        proj_config.add_column(name = col, default_value = "incomplete")
     
-    # Run fastp on each sample
+    # Build worker pool task list 
+    tasks = []
     for index, row in proj_config:
+        tasks.append({
+            "index": index,
+            "row": row,
+            "input_dir": input_dir,
+            "output_dir": output_dir,
+            "threads": threads,
+            "dry_run": dry_run
+        })
 
-        try:
-            if dry_run == True: 
-                print(f"\n{index}\t{row}") 
+    # Start the multiprocessing pool
+    print(f"Starting multiprocessing pool with {processes} workers...")
+    with mp.Pool(processes=processes) as pool:
+        for result in pool.imap_unordered(sample_worker, tasks):
             
-            # Setup inputs & outputs
-            SAMPLE      = row["sample"]
-            fastp_json  = f"{SAMPLE}.json",
-            output_json = output_dir / fastp_json,
-            fastp_html  = f"{SAMPLE}.html",
-            output_html = output_dir / fastp_html,
-            raw_r1      = row["r1"],
-            raw_r2      = row["r2"],
-            in_r1       = input_dir / raw_r1,
-            in_r2       = input_dir / raw_r2,
-            qc_r1       = f"{SAMPLE}.qc.r1.fq.gz",
-            qc_r2       = f"{SAMPLE}.qc.r2.fq.gz",
-            out_r1      = output_dir / qc_r1,
-            out_r2      = output_dir / qc_r2,
-            
-            # Run fastp for sample
-            run_fastp_qc(
-                threads     =  threads,
-                output_json = output_json,
-                output_html = output_html,
-                in_r1       = in_r1,
-                in_r2       = in_r2,
-                out_r1      = out_r1,
-                out_r2      = out_r2,
-                dry_run     = dry_run,
-            )
-        except Exception as e:
-            print(f"Fastp Error: {e}")
-            continue
+            index = result["index"]
 
-        else:
-            # Update config with output files
-            proj_config.update_row(index, "qc_r1", qc_r1)
-            proj_config.update_row(index, "qc_r2", qc_r2)
-            proj_config.update_row(index, "fastp_json", fastp_json)
+            if result.get("success"):
+                # Update file paths
+                proj_config.update_row(index, "qc_r1", result["qc_r1"])
+                proj_config.update_row(index, "qc_r2", result["qc_r2"])
+                proj_config.update_row(index, "fastp_json", result["fastp_json"])
+                
+                # Update all the stats
+                for k, v in result["stats"].items():
+                    proj_config.update_row(index, k, v)
+            else:
+                print(f"Error processing row {index}: {result['error']}")
 
-            # delete html file?
-            #delete_file(output_html, dry_run = dry_run)
-        finally:
-            # save updated config after processing each row
-            proj_config.save()
-
-    ## FastpQC Stats ##
-    
-    # Define output columns
-    fastp_stats = [
-        "duplication_rate",
-        "adapter_trimmed_reads",
-        "adapter_trimmed_bases",
-        "r1_preQC_total_reads",
-        "r2_preQC_total_reads",
-        "r1_preQC_total_bases",
-        "r2_preQC_total_bases",
-        "r1_postQC_total_reads",
-        "r2_postQC_total_reads",
-        "r1_postQC_total_bases",
-        "r2_postQC_total_bases",
-    ]
-    
-    # Update config with output fields
-    for stat in fastp_stats:
-        proj_config.add_column(name = stat, default_value = "incomplete")
-    
-    # Run parse_fastp_json for each sample
-
-    for index, row in proj_config:
-
-        try:
-            if dry_run == True: 
-                print(f"\n{index}\t{row}") 
-            
-            # Setup inputs & outputs
-            SAMPLE      = row["sample"]
-            fastp_json  = row["fastp_json"]
-            qc_stats = parse_fastp_json(fastp_json, dry_run = dry_run)
-        
-        except Exception as e:
-            print(f"Stats Error: {e}")
-            continue
-
-        else:
-            # Update config with parsed fastp stats
-            for k,v in qc_stats.items():
-                proj_config.update_row(index, k, v)
-
-        finally:
-            # save updated config after processing each row
+            # Save incrementally
             proj_config.save()
 
 if __name__ == "__main__":
