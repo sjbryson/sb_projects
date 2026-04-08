@@ -14,7 +14,7 @@ from typing import Optional
 from dataclasses import dataclass, field
 from sb_projects.wrapper import Wrapper
 from sb_projects.config import ConfigDf
-from sb_projects.subprocess_utilities import run_check_call
+from sb_projects.subprocesses import run_check_call
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to convert paired fastq.bz2 to fq.gz.")

@@ -19,7 +19,7 @@ from typing import Optional, Tuple
 from dataclasses import dataclass, field
 from sb_projects.wrapper import Wrapper
 from sb_projects.config import ConfigDf
-from sb_projects.subprocess_utilities import run_check_output_to_str
+from sb_projects.subprocesses import run_check_output_to_str
 from sb_projects.file_utilities import delete_file
 
 
