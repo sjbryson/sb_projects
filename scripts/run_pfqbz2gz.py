@@ -13,7 +13,7 @@ import multiprocessing as mp
 from typing import Optional
 from dataclasses import dataclass, field
 from sb_projects.wrapper import Wrapper
-from sb_projects.config_manager import ConfigManager
+from sb_projects.config import ConfigDf
 from sb_projects.subprocess_utilities import run_check_call
 
 def parse_args() -> argparse.Namespace:
@@ -141,7 +141,7 @@ def main():
     r2_col     = args.r2_col
 
     # Load config
-    proj_config = ConfigManager(config_file = config)
+    proj_config = ConfigDf(config_file = config)
 
     # Define output columns & add to config
     fastp_outputs = ["r1_gz", "r2_gz"]

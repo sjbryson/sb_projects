@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, Iterator
 
 @dataclass
-class ConfigManager:
+class ConfigDf:
     """A lightweight wrapper for using a Pandas df for workflow data."""
     config_file: Path | str
     delimiter:   str = '\t'

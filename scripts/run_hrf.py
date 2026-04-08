@@ -4,7 +4,11 @@
 Samuel Joseph Bryson
 Copyright 2026
 
-- Run pfqbz2gz on a set of samples; convert bz2 compressed paired fastq to fq.gz.
+- Run host read filtering on a set of samples.
+- Supply one or two (for sequential) host databases in mmi format for read filtering.
+- Runs minimap2 -ax sr --secondary=no {threads} {db.mmi} {r1} {r2} |
+- Piped sam formatted alignment records are parsed and filtered using fss2pfq.
+- Reads that pass (unaligned or low quality alignments) are written to paired fastq.gz files.
 """
 
 import argparse
@@ -14,22 +18,21 @@ import json
 from typing import Optional, Tuple
 from dataclasses import dataclass, field
 from sb_projects.wrapper import Wrapper
-from sb_projects.config_manager import ConfigManager
+from sb_projects.config import ConfigDf
 from sb_projects.subprocess_utilities import run_check_output_to_str
+from sb_projects.file_utilities import delete_file
 
-# Database paths
-DB_DIR      = Path.home() / "bio_db"
-HG13        = DB_DIR      / "T2T_CHM13/srHG13.mmi"
-HG38        = DB_DIR      / "GRCh38.p14/srHG38.mmi" 
-# Filtering Defaults
-MAX_AP = None # float: Alignment_Percentage = Alignment_Length / Read_Length
-MAX_PI = None # float: percent identity = Num_Identities / Alignment_Length
-MAX_AS = None # integer: SAM tag -> Alignment_Score
-MAX_AL = None # integer: CIGAR -> Alignment_Length
-MAX_SL = None # float: SL = Alignment_Score / Alignment_Length
+
+# Filtering Defaults >>> These could be converted to args.
+MAX_AP = 0.5   # float:   Alignment_Percentage = Alignment_Length / Read_Length
+MAX_PI = 0.5   # float:   percent identity = Num_Identities / Alignment_Length
+MAX_AS = 150   # integer: SAM tag -> Alignment_Score
+MAX_AL = 75    # integer: CIGAR -> Alignment_Length
+MAX_SL = 1.0   # float:   SL = Alignment_Score / Alignment_Length
+#MAX_MQ = 10  # integer: MAPQ score
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Script to run fastq QC on a set of paired reads.")
+    parser = argparse.ArgumentParser(description="Script to run host read filtering on a set of paired reads.")
 
     parser.add_argument("--config_file", type=str, required=True, 
                         help="Path to the configuration file (str).")
@@ -39,9 +42,6 @@ def parse_args() -> argparse.Namespace:
     
     parser.add_argument("--output_dir", type=str, required=True, 
                         help="Directory where output files will be saved (str).")
-    
-    parser.add_argument("--temp_dir", type=str, required=True, 
-                        help="Temporary directory where intermediate files will be saved (str).")
 
     parser.add_argument("--threads", type=int, default=4, 
                         help="Number of threads to use (int, default: 4).")
@@ -49,10 +49,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--processes", type=int, default=2, 
                         help="Number of parallel samples to process at once (int, default: 2).")
     
-    parser.add_argument("--mmiA", type=str, required=True,
+    parser.add_argument("--db1", type=str, required=True,
                         help="1st pre-computed Minimap database path (str).")
     
-    parser.add_argument("--mmiB", type=str, required=False,
+    parser.add_argument("--db2", type=str, default=None,
                         help="Optional: 2nd pre-computed Minimap database path (str).")
     
     parser.add_argument("--sample_col", type=str, default="sample", 
@@ -69,10 +69,6 @@ def parse_args() -> argparse.Namespace:
 
     return parser.parse_args()
 
-    ## --- ToDo: --- ##
-    # add output r1 column name --> currently "hrf_r1_gz"
-    # add output r2 column name --> currently "hrf_r2_gz"
-
 # Wrapper subclass for running HRF pipeline: minimap2 | fss2pfq 
 @dataclass(kw_only=True)
 class HRFsr(Wrapper):
@@ -82,136 +78,205 @@ class HRFsr(Wrapper):
     fq_prefix:      Path | str      = field(metadata={'type': 'output_file'})
     map_threads:    Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     filter_threads: Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    max_ap:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max_ap {value}'})
-    max_pi:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max_pi {value}'})
-    max_as:         Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max_as {value}'})
-    max_al:         Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max_al {value}'})
-    max_sl:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max_sl {value}'})
+    max_ap:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-ap {value}'})
+    max_pi:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-pi {value}'})
+    max_as:         Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-as {value}'})
+    max_al:         Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-al {value}'})
+    max_sl:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-sl {value}'})
+   #max_mq:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-mq {value}'})
     cmd:            str             = "minimap2 -ax sr --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
-                                      fss2pfq {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} -p {fq_prefix}"
+                                      fss2pfq {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} --fq-prefix {fq_prefix}"
+   #cmd:            str             = "minimap2 -ax sr --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
+   #                                  fss2pfq {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} {max_mq} --fq-prefix {fq_prefix}"
 
-
-
-# Run fastp on a set of r1 and r2 <sample>_<r#>.fq.gz
+# Run HRF on a set of r1 and r2 <sample>_<r#>.fq.gz
 def run_hrf(
-        input_mmi:   Path,
-        in_r1:       Path,
-        in_r2:       Path,
-        out_p:       Path,
-        threads:     int,
-
-
-
-        dry_run:     bool,
+        input_mmi: Path,
+        in_r1:     Path,
+        in_r2:     Path,
+        fq_prefix: Path,
+        threads:   int,
+        dry_run:   bool,
     ) -> Tuple[int, int]:
+    
     # Init a HRFsr Wrapper obj.
     process = HRFsr(
-        threads       = threads, 
-        in_r1         = in_r1,
-        in_r2         = in_r2,
-        
-        dry_run       = dry_run,
+        input_mmi      = input_mmi,
+        r1             = in_r1,
+        r2             = in_r2,
+        fq_prefix      = fq_prefix,
+        map_threads    = threads - 4 if threads >=12 else threads - 2,
+        filter_threads = 4 if threads >=12 else 2,
+        max_ap         = MAX_AP,
+        max_pi         = MAX_PI,
+        max_as         = MAX_AS,
+        max_al         = MAX_AL,
+        max_sl         = MAX_SL,
+        #max_mq         = MAX_MQ,
+        dry_run        = dry_run,
     )
     
     counts_json = run_check_output_to_str(
         formatted_command = process.build(),
         dry_run           = dry_run,
     )
-    if dry_run == True:
+    
+    if dry_run:
         counts_json = json.dumps(
-            {'written_pairs':11, 'total_pairs':42}
+            {"total_pairs":42, "written_pairs":11}
         )
+    
     data = json.loads(counts_json)
-    filtered_pairs = int(data['written_pairs'])
-    original_pairs = int(data['total_pairs'])
+    original_pairs = int(data["total_pairs"])
+    filtered_pairs = int(data["written_pairs"])
+    
     return original_pairs, filtered_pairs
 
 
 def sample_worker(task_args: dict) -> dict:
     """Worker function to process a single sample. Returns a dictionary with the results."""
-    index      = task_args["index"]
-    row        = task_args["row"]
-    input_dir  = task_args["input_dir"]
-    output_dir = task_args["output_dir"]
-    threads    = task_args["threads"]
-    dry_run    = task_args["dry_run"]
-    sample_col = task_args["sample_col"]
-    r1_col     = task_args["r1_col"]
-    r2_col     = task_args["r2_col"]
+    dry_run     = task_args["dry_run"]
+    index       = task_args["index"]
+    row         = task_args["row"]
+    input_dir   = task_args["input_dir"]
+    output_dir  = task_args["output_dir"]
+    threads     = task_args["threads"]
+    sample_col  = task_args["sample_col"]
+    r1_col      = task_args["r1_col"]
+    r2_col      = task_args["r2_col"]
+    db_list     = task_args["db_list"]
+    db_names    = task_args["db_names"]
+    hrf_outputs = task_args["hrf_outputs"]
 
     if dry_run: 
         print(f"\nWorker processing: {index}\t{row}") 
-
-    SAMPLE     = row[sample_col]
-    r1_bz2     = row[r1_col]
-    r2_bz2     = row[r2_col]
-    in_r1      = input_dir / r1_bz2
-    in_r2      = input_dir / r2_bz2
-    out_prefix = output_dir / SAMPLE
-    r1_gz      = f"{SAMPLE}_R1.fq.gz"
-    r2_gz      = f"{SAMPLE}_R2.fq.gz"
     
-    try:
-        original_pairs, filtered_pairs = run_hrf(
-            threads    = threads,
-            in_r1      = in_r1,
-            in_r2      = in_r2,
-            out_prefix = out_prefix,
-            dry_run    = dry_run,
-        )
-
-        #######
-        ## optional second db scan ##
-
-
-        # Return success state
-        return {"index": index, "success": True, "r1_gz": r1_gz, "r2_gz": r2_gz, "error": None}
+    SAMPLE = row[sample_col]
     
-    except Exception as e:
-        # Return failure state
-        return {"index": index, "success": False, "r1_gz": None, "r2_gz": None, "error": str(e)}
+    # Set up input dicts
+    if len(db_names) == 1:
+        inputs = {
+            1: { 
+                "input_mmi": db_list[0],
+                "threads"  : threads,
+                "in_r1"    : input_dir / row[r1_col],
+                "in_r2"    : input_dir / row[r2_col],
+                "fq_prefix": output_dir / f"{SAMPLE}_hrf",
+                "dry_run"  : dry_run,
+            }
+        }
+        intermediates = []
+    else:
+        inputs = {
+            1: { 
+                "input_mmi": db_list[0],
+                "threads"  : threads,
+                "in_r1"    : input_dir / row[r1_col],
+                "in_r2"    : input_dir / row[r2_col],
+                "fq_prefix": output_dir / f"{SAMPLE}_{db_names[0]}",
+                "dry_run"  : dry_run,
+            },
+            2: { 
+                "input_mmi": db_list[1],
+                "threads"  : threads,
+                "in_r1"    : output_dir / f"{SAMPLE}_{db_names[0]}.r1.fq.gz",
+                "in_r2"    : output_dir / f"{SAMPLE}_{db_names[0]}.r2.fq.gz",
+                "fq_prefix": output_dir / f"{SAMPLE}_hrf",
+                "dry_run"  : dry_run,
+            },
+        }
+        intermediates = [
+            output_dir / f"{SAMPLE}_{db_names[0]}.r1.fq.gz",
+            output_dir / f"{SAMPLE}_{db_names[0]}.r2.fq.gz",
+        ]
 
+    # Set up output dict
+    results = {"index": index, "success": False, "error": None}
+    for o in hrf_outputs:
+        results[o] = None
 
+    # For each input call run_hrf()
+    for i in range(len(db_names)):
+        db_name = db_names[i]
+        try:
+            hrf_inputs = inputs[i+1] 
+            original_pairs, filtered_pairs = run_hrf(**hrf_inputs)
 
-
+        except Exception as e:
+        
+            results["error"] = str(e)
+            # Return failure state
+            return results
+        
+        else:
+            results[f"{db_name}_unfiltered_pairs"] = original_pairs
+            results[f"{db_name}_filtered_pairs"] = filtered_pairs
+        
+    results["success"] = True
+    results["hrf_r1"] = f"{SAMPLE}_hrf.r1.fq.gz"
+    results["hrf_r2"] = f"{SAMPLE}_hrf.r2.fq.gz"
+    if len(intermediates) > 0:
+        for f in intermediates: delete_file(f, dry_run = dry_run)
+    
+    return results
 
 def main():
-    pass
 
-'''
     # Parse args
     args       = parse_args()
+    dry_run    = True if args.dry_run else False
     config     = Path(args.config_file)
     input_dir  = Path(args.input_dir)
     output_dir = Path(args.output_dir)
     threads    = args.threads
     processes  = args.processes
-    dry_run    = True if args.dry_run else False
     sample_col = args.sample_col
     r1_col     = args.r1_col
     r2_col     = args.r2_col
+    db1        = Path(args.db1)
+    db1_name   = db1.stem
+    db2        = Path(args.db2) if args.db2 is not None else None
+    db2_name   = db2.stem if db2 is not None else None
+    #max_ap     = MAX_AP
+    #max_pi     = MAX_PI
+    #max_as     = MAX_AS
+    #max_al     = MAX_AL
+    #max_sl     = MAX_SL
+    #max_mq     = MAX_MQ
 
     # Load config
-    proj_config = ConfigManager(config_file = config)
+    proj_config = ConfigDf(config_file = config)
 
     # Define output columns & add to config
-    fastp_outputs = ["r1_gz", "r2_gz"]
-    for output in fastp_outputs:
+    db_list  = [x for x in [db1, db2] if x is not None]
+    db_names = [x for x in [db1_name, db2_name] if x is not None]
+    # original_pairs, filtered_pairs for each db + final r1 and r2
+    hrf_outputs = []
+    for db_name in db_names:
+        hrf_outputs.append(f"{db_name}_unfiltered_pairs")
+        hrf_outputs.append(f"{db_name}_filtered_pairs")
+    hrf_outputs.append("hrf_r1")
+    hrf_outputs.append("hrf_r2")
+            
+    for output in hrf_outputs:
         proj_config.add_column(name = output, default_value = None)
     
     # Build worker pool task list 
     tasks = []
     for index, row in proj_config:
         tasks.append({
-            "index":      index,
-            "row":        row,
-            "input_dir":  input_dir,
-            "output_dir": output_dir,
-            "threads":    threads,
-            "dry_run":    dry_run,
-            "sample_col": sample_col,
-            "r1_col":     r1_col,
-            "r2_col":     r2_col,
+            "index":       index,
+            "row":         row,
+            "input_dir":   input_dir,
+            "output_dir":  output_dir,
+            "threads":     threads,
+            "dry_run":     dry_run,
+            "sample_col":  sample_col,
+            "r1_col":      r1_col,
+            "r2_col":      r2_col,
+            "db_list":     db_list,
+            "db_names":    db_names,
+            "hrf_outputs": hrf_outputs,
         })
 
     # Start the multiprocessing pool
@@ -222,16 +287,16 @@ def main():
             index = result["index"]
             
             if result["success"]:
-                # Update config with output files
-                proj_config.update_row(index, "r1_gz", result["r1_gz"])
-                proj_config.update_row(index, "r2_gz", result["r2_gz"])
+                # Update config with output files and counts
+                for output in hrf_outputs:
+                    proj_config.update_row(index, output, result[output])
+
+                
             else:
                 print(f"Error processing row {index}: {result['error']}")
             
             # Save updated config after processing each row
             proj_config.save()
-
-'''
 
 if __name__ == "__main__":
     main()
