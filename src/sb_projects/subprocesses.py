@@ -1,9 +1,4 @@
 
-"""
-Samuel Joseph Bryson
-Copyright 2026
-"""
-
 import subprocess
 from pathlib import Path
 import logging

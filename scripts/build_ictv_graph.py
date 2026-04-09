@@ -1,10 +1,7 @@
 #! python
 
 """
-Samuel Joseph Bryson
-Copyright 2026
 Build a neo4j graph of the ICTV viral taxonomy.
-
 """
 
 from neomodel import get_config, db

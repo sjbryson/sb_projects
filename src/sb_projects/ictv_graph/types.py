@@ -1,9 +1,6 @@
 
 """
-Samuel Joseph Bryson
-Copyright 2026
-
-- custom types and validation logic
+Custom types and validation logic
 """
 
 from enum import Enum

@@ -1,9 +1,6 @@
 
 """
-Samuel Joseph Bryson
-Copyright 2026
-
-- node definitions defined with neomodel
+Node definitions defined with neomodel
 """
 
 from neomodel import (
@@ -21,10 +18,7 @@ from sb_projects.ictv_graph.relationships import (
     HAS_ASSEMBLY,
     GENOME_ASSIGNMENT,
 )
-#from ictv_graph.types import(
-#    TaxonRank,
-#    VirusType
-#)
+
 
 class ICTVtaxon(StructuredNode):
     # properties

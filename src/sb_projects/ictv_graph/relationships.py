@@ -1,9 +1,6 @@
 
 """
-Samuel Joseph Bryson
-Copyright 2026
-
-- edge definitions defined with neomodel
+Edge definitions defined with neomodel
 """
 
 from neomodel import StructuredRel, StringProperty, DateTimeProperty

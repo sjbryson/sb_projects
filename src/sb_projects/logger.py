@@ -1,9 +1,4 @@
 
-"""
-Samuel Joseph Bryson
-Copyright 2026
-"""
-
 import logging
 from pathlib import Path
 from typing import Optional
@@ -79,15 +74,23 @@ def log_session(name: str, log_file: str | Path, level: int = logging.INFO, debu
 '''
 Example usage:
 
-from src.config_manager import ConfigManager
-from src.wrappers import SomeBioTool
-from src.logging_utilities import log_session
-from src.subprocess_utilities import run_cmd
+from src.config import ConfigDf
+from src.wrappers import Wrapper
+from src.logger import log_session
+from src.subprocesses import run_cmd
+
+@dataclass(kw_only=True)
+class SomeTool(Wrapper):
+    """Wrapper subclass for Some Tool."""
+    input:   Path | str    = field(metadata={'type': 'input_file'})
+    output:  Path | str    = field(metadata={'type': 'input_file'})
+    threads: Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cmd:     str           = "some_cli -i {input} -o {output} {threads}
 
 def run_pipeline():
-    cfg = ConfigManager("manifest.tsv")
+    cfg = ConfigDf("manifest.tsv")
 
-    for row in cfg:
+    for index, row in cfg:
         sample_id = row['sample_id']
         log_path = f"logs/{sample_id}_run.log"
 
@@ -97,12 +100,12 @@ def run_pipeline():
             
             try:
                 # Build the command
-                tool = SomeBioTool(**row)
+                tool = SomeTool(**row)
                 cmd = tool.build()
                 log.debug(f"Generated Command: {cmd}")
                 
-                # subprocess utility is called here
-                # run_cmd(cmd, logger=log)
+                # subprocess is called here
+                run_cmd(cmd, logger=log)
                 
                 log.info(f"--- Finished Analysis for {sample_id} ---")
 

@@ -1,12 +1,5 @@
 
-"""
-Samuel Joseph Bryson
-Copyright 2026
-"""
-
 from neomodel import get_config, db
-
-
 
 def test_connection():
     """
@@ -39,7 +32,5 @@ def test_connection():
         print(f"Connection Pool Closed.")
 
 if __name__ == "__main__":
-    #config = get_config()
-    #config.database_url = 'bolt://neo4j:virus_db@localhost:7687'  # default
+    
     test_connection()
-    #db.close_connection()

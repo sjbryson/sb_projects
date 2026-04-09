@@ -1,9 +1,6 @@
 #! python
 
 """
-Samuel Joseph Bryson
-Copyright 2026
-
 - Run host read filtering on a set of samples.
 - Supply one or two (for sequential) host databases in mmi format for read filtering.
 - Runs minimap2 -ax sr --secondary=no {threads} {db.mmi} {r1} {r2} |

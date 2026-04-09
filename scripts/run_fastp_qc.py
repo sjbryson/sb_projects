@@ -1,12 +1,10 @@
 #! python
 
 """
-Samuel Joseph Bryson
-Copyright 2026
-
 - 1 - Run fastp QC on a set of samples (r1.fq.gz & r2.fq.gz).
 - 2 - Parse json output to get filtering stats.
 """
+
 import argparse
 import multiprocessing as mp
 from pathlib import Path
@@ -16,7 +14,6 @@ from dataclasses import dataclass, field
 from sb_projects.wrapper import Wrapper
 from sb_projects.config import ConfigDf
 from sb_projects.subprocesses import run_check_call
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Script to run fastq QC on a set of paired reads.")

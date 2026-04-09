@@ -1,9 +1,4 @@
 
-"""
-Samuel Joseph Bryson
-Copyright 2026
-"""
-
 from pathlib import Path
 import gzip
 import subprocess

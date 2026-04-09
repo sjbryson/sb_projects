@@ -1,9 +1,6 @@
 #! python
 
 """
-Samuel Joseph Bryson
-Copyright 2026
-
 - Run pfqbz2gz on a set of samples; convert bz2 compressed paired fastq to fq.gz.
 """
 

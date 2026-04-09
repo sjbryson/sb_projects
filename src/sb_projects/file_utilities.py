@@ -1,10 +1,4 @@
 
-"""
-Samuel Joseph Bryson
-Copyright 2026
-"""
-
-
 import shutil
 from pathlib import Path
 from subprocess import check_output
