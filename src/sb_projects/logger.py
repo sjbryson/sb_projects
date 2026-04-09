@@ -73,11 +73,11 @@ def log_session(name: str, log_file: str | Path, level: int = logging.INFO, debu
 
 '''
 Example usage:
-
-from src.config import ConfigDf
-from src.wrappers import Wrapper
-from src.logger import log_session
-from src.subprocesses import run_cmd
+from dataclasses import dataclass, field
+from sb_projects.config import ConfigDf
+from sb_projects.wrappers import Wrapper
+from sb_projects.logger import log_session
+from sb_projects.subprocesses import run_cmd
 
 @dataclass(kw_only=True)
 class SomeTool(Wrapper):
