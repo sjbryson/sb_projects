@@ -59,7 +59,7 @@ class ConvertPairedFastqBZ2toGz(Wrapper):
     threads:       Optional[int] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
     cmd:           str           = "pfqbz2gz {threads} --r1 {r1_fastq} --r2 {r2_fastq} -o {output_prefix}"
 
-# Run fastp on a set of r1 and r2 <sample>_<r#>.fq.gz
+# Run cpfqbz2gz on a set of r1 and r2 fq.bz2 files.
 def run_pfqbz2gz(
         threads:     int,
         in_r1:       Path,
