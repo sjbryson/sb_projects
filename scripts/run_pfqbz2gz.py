@@ -60,59 +60,32 @@ class ConvertPairedFastqBZ2toGz(Wrapper):
     cmd:           str           = "pfqbz2gz {threads} --r1 {r1_fastq} --r2 {r2_fastq} -o {output_prefix}"
 
 # Run cpfqbz2gz on a set of r1 and r2 fq.bz2 files.
-def run_pfqbz2gz(
-        threads:     int,
-        in_r1:       Path,
-        in_r2:       Path,
-        out_prefix:  Path,
-        dry_run:     bool,
-    ) -> None:
-    # Init a ConvertPairedFastqBZ2toGz Wrapper obj.
-    process = ConvertPairedFastqBZ2toGz(
-        r1_fastq      = in_r1,
-        r2_fastq      = in_r2,
-        output_prefix = out_prefix,
-        threads       = threads,
-        dry_run       = dry_run,
-    )
-    cmd = process.build()
-    run_check_call(
-        formatted_command = cmd,
-        devnull           = True,
-        dry_run           = dry_run,
-    )
-
 def sample_worker(task_args: dict) -> dict:
     """Worker function to process a single sample. Returns a dictionary with the results."""
     index      = task_args["index"]
     row        = task_args["row"]
-    input_dir  = task_args["input_dir"]
-    output_dir = task_args["output_dir"]
-    threads    = task_args["threads"]
     dry_run    = task_args["dry_run"]
     sample_col = task_args["sample_col"]
-    r1_col     = task_args["r1_col"]
-    r2_col     = task_args["r2_col"]
-
+    SAMPLE     = row[sample_col]
+    r1_gz      = f"{SAMPLE}_R1.fq.gz"
+    r2_gz      = f"{SAMPLE}_R2.fq.gz"
+   
     if dry_run: 
         print(f"\nWorker processing: {index}\t{row}") 
 
-    SAMPLE     = row[sample_col]
-    r1_bz2     = row[r1_col]
-    r2_bz2     = row[r2_col]
-    in_r1      = input_dir / r1_bz2
-    in_r2      = input_dir / r2_bz2
-    out_prefix = output_dir / SAMPLE
-    r1_gz      = f"{SAMPLE}_R1.fq.gz"
-    r2_gz      = f"{SAMPLE}_R2.fq.gz"
-    
     try:
-        run_pfqbz2gz(
-            threads    = threads,
-            in_r1      = in_r1,
-            in_r2      = in_r2,
-            out_prefix = out_prefix,
-            dry_run    = dry_run,
+        process = ConvertPairedFastqBZ2toGz(
+            r1_fastq      = task_args["input_dir"] / row[task_args["r1_col"]],
+            r2_fastq      = task_args["input_dir"] / row[task_args["r2_col"]],
+            output_prefix = task_args["output_dir"] / SAMPLE,
+            threads       = task_args["threads"],
+            dry_run       = dry_run,
+        )
+        cmd = process.build()
+        run_check_call(
+            formatted_command = cmd,
+            devnull           = True,
+            dry_run           = dry_run,
         )
         # Return success state
         return {"index": index, "success": True, "r1_gz": r1_gz, "r2_gz": r2_gz, "error": None}

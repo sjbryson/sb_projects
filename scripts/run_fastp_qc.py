@@ -147,48 +147,45 @@ def parse_fastp_json(json_file: Path, dry_run: bool) -> dict:
 
     return metrics
 
-# Multiprocessing worker function
+# Multiprocessing worker function to run fastp on a set of r1 and r2 <sample>_<r#>.fq.gz
 def sample_worker(task_args: dict) -> dict:
     """Worker function to run Fastp and parse the resulting JSON."""
-    index      = task_args["index"]
-    row        = task_args["row"]
-    input_dir  = task_args["input_dir"]
-    output_dir = task_args["output_dir"]
-    threads    = task_args["threads"]
-    dry_run    = task_args["dry_run"]
-    sample_col = task_args["sample_col"]
-    r1_col     = task_args["r1_col"]
-    r2_col     = task_args["r2_col"]
-
+    index       = task_args["index"]
+    row         = task_args["row"]
+    threads     = task_args["threads"]
+    SAMPLE      = row[task_args["sample_col"]]
+    fastp_json  = f"{SAMPLE}.json"
+    output_json = task_args["output_dir"] / fastp_json
+    fastp_html  = f"{SAMPLE}.html"
+    qc_r1       = f"{SAMPLE}.qc.r1.fq.gz"
+    qc_r2       = f"{SAMPLE}.qc.r2.fq.gz"
+    dry_run     = task_args["dry_run"]
+    
     if dry_run: 
         print(f"\nWorker processing: {index}\t{row}") 
 
-    # Setup inputs and outputs
-    SAMPLE      = row[sample_col]
-    fastp_json  = f"{SAMPLE}.json"
-    output_json = output_dir / fastp_json
-    fastp_html  = f"{SAMPLE}.html"
-    output_html = output_dir / fastp_html
-    raw_r1      = row[r1_col]
-    raw_r2      = row[r2_col]
-    in_r1       = input_dir / raw_r1
-    in_r2       = input_dir / raw_r2
-    qc_r1       = f"{SAMPLE}.qc.r1.fq.gz"
-    qc_r2       = f"{SAMPLE}.qc.r2.fq.gz"
-    out_r1      = output_dir / qc_r1
-    out_r2      = output_dir / qc_r2
-
     try:
         # Step 1: Run Fastp
-        run_fastp_qc(
-            threads     = threads,
-            output_json = output_json,
-            output_html = output_html,
-            in_r1       = in_r1,
-            in_r2       = in_r2,
-            out_r1      = out_r1,
-            out_r2      = out_r2,
-            dry_run     = dry_run,
+        process = FastpQC(
+            deduplicate   = True,
+            gz            = 6, # default
+            cut_win_size  = 5, # default
+            cut_mean_qual = 25, # default
+            min_length    = 100, # default
+            threads       = threads, 
+            output_json   = output_json,
+            output_html   = task_args["output_dir"] / fastp_html,
+            in_r1         = task_args["input_dir"] / row[task_args["r1_col"]],
+            in_r2         = task_args["input_dir"] / row[task_args["r2_col"]],
+            out_r1        = task_args["output_dir"] / qc_r1,
+            out_r2        = task_args["output_dir"] / qc_r2,
+            dry_run       = dry_run,
+        )
+        cmd = process.build()
+        run_check_call(
+            formatted_command = cmd, 
+            devnull = True,
+            dry_run = dry_run,
         )
 
         # Step 2: Parse JSON
