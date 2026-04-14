@@ -62,19 +62,21 @@ def parse_args() -> argparse.Namespace:
 # Fastp Wrapper subclass
 @dataclass(kw_only=True)
 class FastCov(Wrapper):
-    input_mmi:   Path | str      = field(metadata={'type': 'input_file'})
-    r1:          Path | str      = field(metadata={'type': 'input_file'})
-    r2:          Path | str      = field(metadata={'type': 'input_file'})
-    sample:      str             
-    map_threads: Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    cov_threads: Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
-    min_ap:      Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-ap {value}'})
-    min_pi:      Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-pi {value}'})
-    min_as:      Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-as {value}'})
-    min_al:      Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-al {value}'})
-    min_sl:      Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-sl {value}'})
-    cmd:         str             = "minimap2 -ax sr  --eqx {map_threads} {input_mmi} {r1} {r2} | \
-                                    fastcov {cov_threads} -r {sample} {min_as} > {sample}.sam"
+    input_mmi:    Path | str      = field(metadata={'type': 'input_file'})
+    r1:           Path | str      = field(metadata={'type': 'input_file'})
+    r2:           Path | str      = field(metadata={'type': 'input_file'})
+    sample:       str             
+    map_threads:  Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    cov_threads:  Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-t {value}'})
+    sort_threads: Optional[int]   = field(default=4, metadata={'type': 'value_flag', 'flag_fmt': '-@ {value}'})
+    min_ap:       Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-ap {value}'})
+    min_pi:       Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-pi {value}'})
+    min_as:       Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-as {value}'})
+    min_al:       Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-al {value}'})
+    min_sl:       Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-sl {value}'})
+    cmd:          str             = "minimap2 -ax sr  --eqx {map_threads} {input_mmi} {r1} {r2} | \
+                                     fastcov {cov_threads} -r {sample} {min_as} | \
+                                     samtools sort {sort_threads} - -o {sample}.sorted.bam"
 
 def _parse_fastp_json(json_file: Path, db_name: str, dry_run: bool) -> dict:
     """Parse the fastcov JSON output file and return a dict with specific stats."""
@@ -117,19 +119,20 @@ def _sample_worker(task_args: dict) -> dict:
     
     SAMPLE    = row[sample_col]
     JSON_OUT  = f"{SAMPLE}.{db_name}.json"
-    SAM_OUT   = f"{SAMPLE}.{db_name}.sam"
+    BAM_OUT   = f"{SAMPLE}.{db_name}.sorted.bam"
 
     try:
        # 1 - Run alignment and get alignment stats.
         process = FastCov(
-            input_mmi   = task_args["db"],
-            r1          = task_args["input_dir"] / row[task_args["r1_col"]],
-            r2          = task_args["input_dir"] / row[task_args["r2_col"]],
-            sample      = task_args["output_dir"] / f"{SAMPLE}.{db_name}",
-            map_threads = threads - 4 if threads >=12 else threads - 2,
-            cov_threads = 4 if threads >=12 else 2,
-            min_as      = MIN_AS,
-            dry_run     = dry_run,
+            input_mmi    = task_args["db"],
+            r1           = task_args["input_dir"] / row[task_args["r1_col"]],
+            r2           = task_args["input_dir"] / row[task_args["r2_col"]],
+            sample       = task_args["output_dir"] / f"{SAMPLE}.{db_name}",
+            map_threads  = threads - 4 if threads >=12 else threads - 2,
+            cov_threads  = 4 if threads >=12 else 2,
+            sort_threads = 4,
+            min_as       = MIN_AS,
+            dry_run      = dry_run,
         )
 
         cmd = process.build()
@@ -151,7 +154,7 @@ def _sample_worker(task_args: dict) -> dict:
             "index":                         index,
             "success":                       True,
             f"{db_name}_stats_json":         JSON_OUT,
-            f"{db_name}_sam":                SAM_OUT,
+            f"{db_name}_bam":                BAM_OUT,
             f"{db_name}_run_time":           metrics[f"{db_name}_run_time"],
             f"{db_name}_total_alignments":   metrics[f"{db_name}_total_alignments"],
             f"{db_name}_primary_alignments": metrics[f"{db_name}_primary_alignments"],
@@ -189,7 +192,7 @@ def main():
 
     # Define output columns & add to config
     output_columns = [
-        f"{db_name}_stats_json", f"{db_name}_sam",
+        f"{db_name}_stats_json", f"{db_name}_bam",
         f"{db_name}_run_time", f"{db_name}_total_alignments",
         f"{db_name}_primary_alignments", f"{db_name}_reference_hits"
     ]
