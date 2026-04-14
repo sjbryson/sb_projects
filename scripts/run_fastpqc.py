@@ -65,40 +65,6 @@ class FastpQC(Wrapper):
     cmd:           str           = "fastp  {deduplicate} -3 -z {gz} -W {cut_win_size} -M {cut_mean_qual} -l {min_length} \
                                    {threads} -j {output_json} -h {output_html} -i {in_r1} -I {in_r2} -o {out_r1} -O {out_r2}"
 
-# Run fastp on a set of r1 and r2 <sample>_<r#>.fq.gz
-def run_fastp_qc(
-        threads:     int,
-        output_json: Path,
-        output_html: Path,
-        in_r1:       Path,
-        in_r2:       Path,
-        out_r1:      Path,
-        out_r2:      Path,
-        dry_run:     bool,
-    ) -> None:
-    # Init a FastpQC Wrapper obj.
-    process = FastpQC(
-        deduplicate   = True,
-        gz            = 6, # default
-        cut_win_size  = 5, # default
-        cut_mean_qual = 25, # default
-        min_length    = 100, # default
-        threads       = threads, 
-        output_json   = output_json,
-        output_html   = output_html,
-        in_r1         = in_r1,
-        in_r2         = in_r2,
-        out_r1        = out_r1,
-        out_r2        = out_r2,
-        dry_run       = dry_run,
-    )
-    cmd = process.build()
-    run_check_call(
-        formatted_command = cmd, 
-        devnull = True,
-        dry_run = dry_run,
-    )
-
 def parse_fastp_json(json_file: Path, dry_run: bool) -> dict:
     """Parse the fastp JSON output file and return a dict with specific QC metrics."""
     if dry_run == True:

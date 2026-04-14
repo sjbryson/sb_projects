@@ -4,7 +4,7 @@
 - Run host read filtering on a set of samples.
 - Supply one or two (for sequential) host databases in mmi format for read filtering.
 - Runs minimap2 -ax sr --secondary=no {threads} {db.mmi} {r1} {r2} |
-- Piped sam formatted alignment records are parsed and filtered using fss2pfq.
+- Piped sam formatted alignment records are parsed and filtered using fastfilter.
 - Reads that pass (unaligned or low quality alignments) are written to paired fastq.gz files.
 """
 
@@ -82,9 +82,9 @@ class HRFsr(Wrapper):
     max_sl:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-sl {value}'})
    #max_mq:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-mq {value}'})
     cmd:            str             = "minimap2 -ax sr --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
-                                      fss2pfq {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} --fq-prefix {fq_prefix}"
+                                      fastfilter {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} --fq-prefix {fq_prefix}"
    #cmd:            str             = "minimap2 -ax sr --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
-   #                                  fss2pfq {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} {max_mq} --fq-prefix {fq_prefix}"
+   #                                  fastfilter {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} {max_mq} --fq-prefix {fq_prefix}"
 
 # Run HRF on a set of r1 and r2 <sample>_<r#>.fq.gz
 def run_hrf(
