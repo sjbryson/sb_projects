@@ -74,7 +74,7 @@ class FastCov(Wrapper):
     min_as:       Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-as {value}'})
     min_al:       Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-al {value}'})
     min_sl:       Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--min-sl {value}'})
-    cmd:          str             = "minimap2 -ax sr  --eqx {map_threads} {input_mmi} {r1} {r2} | \
+    cmd:          str             = "minimap2 -ax sr --eqx {map_threads} {input_mmi} {r1} {r2} | \
                                      fastcov {cov_threads} -r {sample} {min_as} | \
                                      samtools sort {sort_threads} - -o {sample}.sorted.bam"
 

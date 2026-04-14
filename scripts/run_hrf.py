@@ -81,7 +81,7 @@ class HRFsr(Wrapper):
     max_al:         Optional[int]   = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-al {value}'})
     max_sl:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-sl {value}'})
    #max_mq:         Optional[float] = field(default=None, metadata={'type': 'value_flag', 'flag_fmt': '--max-mq {value}'})
-    cmd:            str             = "minimap2 -ax sr --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
+    cmd:            str             = "minimap2 -ax sr --eqx --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
                                       fastfilter {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} --fq-prefix {fq_prefix}"
    #cmd:            str             = "minimap2 -ax sr --secondary=no {map_threads} {input_mmi} {r1} {r2} | \
    #                                  fastfilter {filter_threads} {max_ap} {max_pi} {max_as} {max_al} {max_sl} {max_mq} --fq-prefix {fq_prefix}"
