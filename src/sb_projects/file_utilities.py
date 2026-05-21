@@ -28,7 +28,7 @@ def remove_dir(directory: Path | str, dry_run: bool = False) -> None:
     else:
         shutil.rmtree(path)
         message = f"Removed directory {path}."
-        print(message)
+    print(message)
 
 
 def delete_file(file_path: Path | str, dry_run: bool = False) -> None:

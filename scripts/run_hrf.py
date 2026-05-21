@@ -109,7 +109,7 @@ def run_hrf(
         max_as         = MAX_AS,
         max_al         = MAX_AL,
         max_sl         = MAX_SL,
-        #max_mq         = MAX_MQ,
+       #max_mq         = MAX_MQ,
         dry_run        = dry_run,
     )
     
@@ -217,6 +217,7 @@ def sample_worker(task_args: dict) -> dict:
     
     return results
 
+
 def main():
 
     # Parse args
@@ -287,8 +288,6 @@ def main():
                 # Update config with output files and counts
                 for output in hrf_outputs:
                     proj_config.update_row(index, output, result[output])
-
-                
             else:
                 print(f"Error processing row {index}: {result['error']}")
             
